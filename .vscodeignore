@@ -1,0 +1,15 @@
+.vscodeignore
+demo
+.vscode
+doc
+node_modules
+package
+src
+.gitignore
+atot.code-workspace
+pnpm-lock.yaml
+pnpm-workspace.yaml
+readme.md
+tsconfig.json
+tsconfig-build.json
+out

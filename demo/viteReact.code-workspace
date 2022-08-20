@@ -1,0 +1,18 @@
+{
+	"folders": [
+		{
+			"path": "viteReact"
+		},
+		{
+			"path": "viteVue"
+		},
+		{
+			"path": "webpackReact"
+		},
+		{
+			"path": "webpackVue"
+		}
+	],
+	"settings": {
+	}
+}

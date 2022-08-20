@@ -1,0 +1,18 @@
+{
+	"folders": [
+		{
+			"path": "."
+		},
+		{
+			"path": "package\\webview"
+		},
+		{
+			"path": "package\\preview"
+		}
+	],
+	"settings": {
+		"typescript.tsc.autoDetect": "off",
+		"AutoPreview.serverURL": "http://kk.dd",
+		"AutoPreview.locked": true
+	}
+}

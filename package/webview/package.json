@@ -1,0 +1,19 @@
+{
+    "name": "webview",
+    "version": "1.0.0",
+    "description": "",
+    "main": "index.js",
+    "scripts": {
+        "build": "vite build",
+        "watch": "vite build --watch",
+        "preview": "vite"
+    },
+    "author": "",
+    "license": "ISC",
+    "devDependencies": {
+        "vite": "^3.0.7"
+    },
+    "dependencies": {
+        "vue": "^3.2.37"
+    }
+}

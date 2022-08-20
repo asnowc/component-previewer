@@ -1,0 +1,17 @@
+{
+    "compilerOptions": {
+        "jsx": "react",
+        "jsxFactory": "h",
+        "jsxFragmentFactory": "Fragment",
+        "module": "ESNext",
+        "target": "ESNext",
+        "moduleResolution": "node",
+        "outDir": "out",
+        "lib": ["ESNext", "dom"],
+        "rootDir": "src",
+        "strict": true,
+        "skipLibCheck": true
+    },
+    "exclude": ["**/node_modules/**", "package"],
+    "include": ["src"]
+}
