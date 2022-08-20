@@ -8,9 +8,11 @@
 -   你可以设置预览映射（在编辑 `MyPage.tsx` 组件时预览的是 `MyPage.test.tsx`）
 
 监听编辑器的切换(预览版只监听 jsx、tsx、vue)
+
 ![image](https://github.com/Asnow-c/ComponentPreviewer/blob/master/doc/img/switchFile.gif)
 
 文件导出多个组件时，可以手动切换(你可以多准备几组数据，用例测试组件)
+
 ![image](https://github.com/Asnow-c/ComponentPreviewer/blob/master/doc/img/switchCase.gif)
 
 ### 实现原理
@@ -23,7 +25,8 @@
 -   当 vscode 切换组件时，`bridgeData.js` 更新，有热更新功能的如 Vite、Webpack 会自动更新页面，没有热更新功能的可以在 vscode 内的 webView 预览。
 
 插件设置界面:
-![image](https://github.com/Asnow-c/ComponentPreviewer/blob/master/doc/img/switchsetting.png)
+
+![image](https://github.com/Asnow-c/ComponentPreviewer/blob/master/doc/img/setting.png)
 
 > Tips: 你可以利用这个原理，自己实现预览界面
 
