@@ -1,4 +1,4 @@
-[EngLish](https://github.com/Asnow-c/ComponentPreviewer) | [中文](https://github.com/Asnow-c/ComponentPreviewer/doc/readme_zh.md)
+[EngLish](https://github.com/Asnow-c/ComponentPreviewer) | [中文](https://github.com/Asnow-c/ComponentPreviewer/blob/master/doc/readme_zh.md)
 
 ## Component Previewer
 
@@ -8,10 +8,10 @@ This plugin allows you to preview components in real time in VSCode. The page is
 -   You can set the preview mapping (When you edit the 'MyPage.tsx' component, you preview 'MyPage.test.tsx'）
 
 Listen for editor switches (preview only listens for jsx, tsx, vue)
-![image](https://github.com/Asnow-c/ComponentPreviewer/doc/img/switchFile.gif)
+![image](https://github.com/Asnow-c/ComponentPreviewer/blob/master/doc/img/switchFile.gif)
 
 You can manually switch files when exporting multiple components (you can prepare additional sets of data and test components with use cases)
-![image](https://github.com/Asnow-c/ComponentPreviewer/doc/img/switchCase.gif)
+![image](https://github.com/Asnow-c/ComponentPreviewer/blob/master/doc/img/switchCase.gif)
 
 ### Principle
 
@@ -21,7 +21,7 @@ You can manually switch files when exporting multiple components (you can prepar
 -   When VScode switches components, `bridgeFile.js` will be updated. Those with hot update function such as Vite and Webpack will automatically update the page. Those without hot update function can be previewed in the webView in VScode.
 
 Plug-in Settings page
-![image](https://github.com/Asnow-c/ComponentPreviewer/doc/img/switchsetting.png)
+![image](https://github.com/Asnow-c/ComponentPreviewer/blob/master/doc/img/switchsetting.png)
 
 > Tips: You can use this principle to implement your own preview page
 
