@@ -3,25 +3,41 @@ export default function (h: (...arg: any) => Object, parent: parentComponent) {
     if (cache) return cache;
     else return cate(h, parent);
 }
+type obj = {
+    [key: number | string | symbol]: any;
+};
 
 type parentComponent = typeof global.React.Component;
-function cate(h: (...arg: any) => Object, parent: parentComponent) {
+/** 设置JSX Factory, 返回公共组件
+ *  @param parent React是React.Component, Vue是模拟的Component类
+ */
+function cate(h: (...arg: any) => any, parent: parentComponent) {
     var ret = {
         NullTemplate(arg?: string) {
-            var childs = ["The selected component does not have any exports", <br />];
-            if (arg) childs.push(arg);
-            return h("div", { style: { width: "100%" } }, ...childs) as any;
+            return function NullInfo() {
+                var childs = ["The selected component does not have any exports", <br />];
+                if (arg) childs.push(arg);
+                return h("div", { style: { width: "100%" } }, ...childs) as any;
+            };
         },
-        ErrorTemplate(arg?: string): JSX.Element {
-            var childs = ["The wrong component", <br />];
-            if (arg) childs.push(arg);
-            return h("div", { style: { width: "100%" } }, ...childs) as any;
+        ErrorTemplate(msg?: string, error?: Error) {
+            return function ErrorInfo() {
+                var childs = ["The wrong component", <br />];
+                if (msg) childs.push(msg);
+                if (error) {
+                    childs.push(<div style={{ color: "red", fontSize: "12px" }}>{error.stack}</div>);
+                }
+                return h("div", { style: { width: "100%", whiteSpace: "pre" } }, ...childs) as any;
+            };
         },
         Selector: class Selector extends parent<{
             names: string[];
             index: number;
             onSelect?: (id: number) => any;
         }> {
+            constructor(p: any) {
+                super(p);
+            }
             /** 组件类别被点击 */
             select(index: number) {
                 if (this.props.index === index) return;
@@ -42,6 +58,7 @@ function cate(h: (...arg: any) => Object, parent: parentComponent) {
 
             render(): any {
                 let props = this.props;
+
                 return (
                     <div
                         style={{
@@ -81,22 +98,34 @@ function cate(h: (...arg: any) => Object, parent: parentComponent) {
                 );
             }
         },
-        HOME: class HOME extends parent<{ instanceList: ReturnType<typeof getVDOMList> }> {
-            constructor(props: { instanceList: ReturnType<typeof getVDOMList> }) {
+        HOME: class HOME extends parent<{
+            mod: obj;
+            url: string;
+            isCommponent: (cp: any) => boolean;
+        }> {
+            constructor(props: { mod: obj; url: string; isCommponent: (cp: any) => boolean }) {
                 super(props);
-                var instanceList = props.instanceList;
-                if (instanceList.length === 0) {
-                    instanceList[0] = { name: "null", instance: ret.NullTemplate(instanceList.url) };
+                var CPN_List = getVDOMList(props.mod, props.isCommponent, props.url);
+                if (CPN_List.length === 0) {
+                    CPN_List[0] = { name: "null", CPN: ret.NullTemplate(CPN_List.url) };
                 } else
-                    for (const it of instanceList) {
-                        if (!it.instance) it.instance = ret.ErrorTemplate(instanceList.url);
+                    for (const it of CPN_List) {
+                        if (!it.CPN) it.CPN = ret.ErrorTemplate(CPN_List.url);
                     }
                 this.state = {
                     showIndex: 0,
+                    CPN_List,
                 };
+            }
+            componentDidCatch(e: Error) {
+                //组件可能存在错误无法渲染
+                var { showIndex, CPN_List } = this.state;
+                CPN_List[showIndex].CPN = ret.ErrorTemplate("Render time error: " + this.props.url, e);
+                this.setState({ CPN_List });
             }
             state: Readonly<{
                 showIndex: number;
+                CPN_List: ReturnType<typeof getVDOMList>;
             }>;
 
             change(index: number) {
@@ -104,17 +133,18 @@ function cate(h: (...arg: any) => Object, parent: parentComponent) {
             }
             render(): React.ReactNode {
                 const state = this.state;
-                const instanceList = this.props.instanceList;
+                const CPN_List = this.state.CPN_List;
                 var index = state.showIndex;
-                var activeInstance = instanceList[index].instance!;
-                var nameList = instanceList.map(function (val) {
+                var ActiveCPN: any = CPN_List[index].CPN!;
+                var nameList = CPN_List.map(function (val) {
                     return val.name;
                 });
-                let Temp = ret.Selector as any;
                 return (
                     <div style={{ height: "100%", display: "flex", flexDirection: "column" }}>
-                        <Temp names={nameList} index={index} onSelect={this.change.bind(this)} />
-                        <div style={{ flex: "1 1", width: "100%" }}>{activeInstance}</div>
+                        <ret.Selector names={nameList} index={index} onSelect={this.change.bind(this)} />
+                        <div style={{ flex: "1 1", width: "100%" }}>
+                            <ActiveCPN></ActiveCPN>
+                        </div>
                     </div>
                 ) as any;
             }
@@ -123,14 +153,9 @@ function cate(h: (...arg: any) => Object, parent: parentComponent) {
     return ret;
 }
 /** 筛选组件 */
-export function getVDOMList(
-    unk_mod: Object,
-    h: (...arg: any) => Object,
-    isCommponent: (cp: any) => boolean,
-    url = "unknown"
-) {
+function getVDOMList(unk_mod: Object, isCommponent: (cp: any) => boolean, url = "unknown") {
     var mod: any = unk_mod;
-    type modItem = { name: string; instance?: JSX.Element };
+    type modItem = { name: string; CPN?: any };
     type myArray = { url: string } & Array<modItem>;
     var Components: myArray = [] as any;
     Components.url = url;
@@ -139,11 +164,7 @@ export function getVDOMList(
     for (const name of keys) {
         let val = mod[name];
         let obj: modItem = { name };
-        if (isCommponent(val)) {
-            try {
-                obj.instance = h(val) as any;
-            } catch (error) {}
-        }
+        if (isCommponent(val)) obj.CPN = val;
 
         if (name === "default") Components.unshift(obj);
         else Components.push(obj);

@@ -1,0 +1,5 @@
+{
+    "cmd.openView": "打开组件预览窗口",
+    "setting.serverURL.desc":"本地服务器地址",
+    "setting.serverRootDir.desc":"依赖安装的位置(相对于工作区文件夹目录)"
+}

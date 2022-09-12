@@ -15,7 +15,7 @@ export async function autoRender() {
  */
 export async function renderFromFileURL(activeFile: string) {
     try {
-        var mod = await import(activeFile);
+        var mod = await import(/* @vite-ignore */activeFile);
     } catch (error) {
         let e = (error as any).toString();
         mod = { default: comm.ErrorTemplate(e) };

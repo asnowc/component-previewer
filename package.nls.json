@@ -1,0 +1,5 @@
+{
+    "cmd.openView": "打开组件预览窗口",
+    "setting.serverURL.desc":"Local Server URL",
+    "setting.serverRootDir.desc":"Dependent installation location (relative to workspace folder)"
+}

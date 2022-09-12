@@ -4,7 +4,7 @@ import * as common from "./re/Comm";
 export const comm = common.default(h, React.Component); //React和Vue的共有组件
 
 type obj = { [key: string | number | symbol]: any };
-export async function render(mod: any, url?: string) {
+export async function render(mod: any, url: string = "unknow") {
     const root = document.createElement("div");
     document.body.appendChild(root);
     root.style.height = "100%";
@@ -18,9 +18,7 @@ export async function render(mod: any, url?: string) {
         }
         return false;
     }
-    var previewList = common.getVDOMList(mod, h, isCPN, url);
-    let Temp = comm.HOME as any;
-    const App = <Temp instanceList={previewList}></Temp>;
+    const App = <comm.HOME mod={mod} isCommponent={isCPN} url={url}></comm.HOME>;
 
     let version = parseInt(React.version.slice(0, React.version.indexOf(".")));
     var reactDOM: any = await (version >= 18 ? import("react-dom/client") : import("react-dom"));

@@ -1,0 +1,29 @@
+{
+	"folders": [
+		{
+			"path": "."
+		},
+		{
+			"path": "package\\webview"
+		},
+		{
+			"path": "package\\preview"
+		}
+	],
+	"settings": {
+		"typescript.tsc.autoDetect": "off",
+		"AutoPreview.serverURL": "http://kk.dd",
+		"AutoPreview.locked": true,
+		"i18n-ally.localesPaths": [
+			"../../../../../project_code/self/vscode插件开发/Component-Previewer"
+		],
+		"i18n-ally.enabledFrameworks": [
+			"vscode",
+			"i18next",
+			"i18n-tag"
+		],
+		"i18n-ally.enabledParsers": [
+			"json"
+		]
+	}
+}

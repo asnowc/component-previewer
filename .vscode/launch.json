@@ -11,7 +11,7 @@
             "request": "launch",
             "args": ["--extensionDevelopmentPath=${workspaceFolder}", "--disable-extensions"],
             "outFiles": ["${workspaceFolder}/out/**/*.js"],
-            "skipFiles": ["<node_internals>/**", "**/node_modules/**", "A:/IDE/**"],
+            "skipFiles": ["<node_internals>/**", "**/node_modules/**","A:/IDE/**"],
             "preLaunchTask": "${defaultBuildTask}"
         },
         {

@@ -1,5 +1,6 @@
-import * as  Vue from "vue";
-const h = Vue.h;
+import * as React from "react";
+
+const h = React.createElement;
 // const h = React.createElement;
 type Aprops = {
     data1: string;
@@ -11,7 +12,7 @@ document.styleSheets[0].insertRule(`
 td:hover {
     background-color: rgb(101, 188, 188);
 }`);
-export default function A(props: Aprops) {
+function A(props: Aprops) {
     return (
         <table
             className="AD"
@@ -41,4 +42,17 @@ export default function A(props: Aprops) {
             </tbody>
         </table>
     );
+}
+
+// const h = React.createElement
+
+export default function TestCase1() {
+    let a:any=8;
+    a.a.a
+}
+export function TestCase2() {
+    return <A data1="Test case - data 2" data2="Test case - data 2" data3="Test case - data 2" bgColor="#38a96d"></A>;
+}
+export function TestCase3() {
+    return <A data1="Test case - data 3" data2="Test case - data 4" data3="Test case - data 5" bgColor="#3869a9"></A>;
 }

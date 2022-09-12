@@ -17,22 +17,6 @@ const dev = {
     },
 };
 
-/**
- *  @description 获取活动的工作区文件夹. 如果没有则为undefined
- */
-function getActiveFolder() {
-    const workspaceFolders = vscode.workspace.workspaceFolders;
-    if (!workspaceFolders) return undefined;
-    const activeFileName = vscode.window.activeTextEditor?.document.fileName;
-    if (!activeFileName) return undefined;
-
-    if (workspaceFolders.length === 1) return workspaceFolders[0];
-    for (let i = workspaceFolders.length - 1; i >= 0; i--) {
-        let folder = workspaceFolders[i];
-        if (activeFileName.startsWith(folder.uri.fsPath)) return folder;
-    }
-    return undefined;
-}
 function errorMessage(msg: string) {
     vscode.window.showErrorMessage("Component Previewer: " + msg);
 }
@@ -42,13 +26,145 @@ function waringMessage(msg: string) {
 function infoMessage(msg: string) {
     vscode.window.showInformationMessage("Component Previewer: " + msg);
 }
-/** @description 获取扩展设置信息 */
-function getExtensionConfig(workSpaceFolder?: vscode.WorkspaceFolder) {
-    return vscode.workspace.getConfiguration("ComponentPreviewer", workSpaceFolder);
+export const CMDS = {
+    openView: "ComponentPreviewer.openView",
+};
+export let extContext: ExtensionContext;
+let statusBarDispatcher: StatusBarDispatcher;
+export async function activate(context: ExtensionContext) {
+    extContext = context;
+    statusBarDispatcher = StatusBarDispatcher.getInstance();
 }
 
-class ComponentPreview {
-    baseData: {
+export function deactivate() {}
+
+class StatusBarDispatcher {
+    private static instance: StatusBarDispatcher;
+
+    private readonly Views = new Map<WorkspaceFolder, View>();
+    private readonly viewInfos = new Map<View, { barSet: StatusBarDispatcher["defaultViewInfo"] }>();
+    private readonly statusBar = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right);
+    private activeFolder?: WorkspaceFolder;
+    private get activeView(): View | undefined {
+        return this.activeFolder && this.Views.get(this.activeFolder);
+    }
+    private readonly defaultViewInfo = { toltip: "打开预览界面", text: "C Prev" };
+    private constructor() {
+        extContext.subscriptions.push(
+            vscode.commands.registerCommand(CMDS.openView, () => {
+                if (!this.activeFolder) return;
+
+                const activeView = this.Views.get(this.activeFolder);
+                if (activeView) activeView.click();
+                else {
+                    //创建新的工作区监控视图
+                    const view = new View(
+                        this.activeFolder,
+                        this.onViewClose.bind(this, this.activeFolder),
+                        this.setBarInfo
+                    );
+                    this.Views.set(this.activeFolder, view);
+                }
+            }),
+            this.statusBar
+        );
+        this.statusBar.command = CMDS.openView;
+        {
+            const activeTextEditor = vscode.window.activeTextEditor;
+            const activeFolder = activeTextEditor && this.getActiveFolder(activeTextEditor);
+            activeFolder && this.setActiveFolder(activeFolder);
+        }
+
+        vscode.workspace.onDidChangeWorkspaceFolders(
+            (e) => {
+                const views = this.Views;
+                //有工作区文件夹被删除
+                for (const it of e.removed) {
+                    let view = views.get(it);
+                    view && view.close();
+                }
+            },
+            undefined,
+            extContext.subscriptions
+        );
+        vscode.window.onDidChangeActiveTextEditor(
+            (activeTextEditor) => {
+                if (activeTextEditor) {
+                    const activeFolder = this.getActiveFolder(activeTextEditor);
+                    if (activeFolder) {
+                        this.setActiveFolder(activeFolder);
+                        this.activeView?.onChangeActiveFile(activeTextEditor);
+                        return;
+                    }
+                }
+                this.statusBar.hide();
+            },
+            undefined,
+            extContext.subscriptions
+        );
+        vscode.workspace.onDidSaveTextDocument(
+            (e) => {
+                this.activeView?.onActiveFileSave();
+            },
+            undefined,
+            extContext.subscriptions
+        );
+    }
+    private setBarInfo = (view: View, infoObj: StatusBarDispatcher["defaultViewInfo"]) => {
+        if (this.activeFolder && this.Views.get(this.activeFolder) === view) {
+            Object.assign(this.statusBar, infoObj);
+        } else {
+            let viewInfo = this.viewInfos.get(view);
+            if (viewInfo) viewInfo.barSet = infoObj;
+        }
+    };
+    private setActiveFolder(folder: WorkspaceFolder) {
+        if (folder === this.activeFolder) return;
+        else {
+            this.statusBar.show();
+            this.activeFolder = folder;
+        }
+
+        let barSet = this.defaultViewInfo;
+        const activeView = folder ? this.Views.get(folder) : undefined;
+        if (activeView) {
+            this.activeFolder = folder;
+            barSet = this.viewInfos.get(activeView)!.barSet;
+        }
+        Object.assign(this.statusBar, barSet);
+    }
+    private onViewClose(folder: WorkspaceFolder) {
+        var view = this.Views.get(folder)!;
+        this.Views.delete(folder);
+        this.viewInfos.delete(view);
+    }
+    /**
+     *  @description 获取活动的工作区文件夹. 如果没有则为undefined
+     */
+    getActiveFolder(activeTextEditor: vscode.TextEditor): WorkspaceFolder | undefined {
+        const workspaceFolders = vscode.workspace.workspaceFolders;
+        if (!workspaceFolders) return undefined;
+        const activeFileName = activeTextEditor.document.fileName;
+        for (let i = workspaceFolders.length - 1; i >= 0; i--) {
+            let folder = workspaceFolders[i];
+            if (activeFileName.startsWith(folder.uri.fsPath)) return folder;
+        }
+        return undefined;
+    }
+    static getInstance(...args: []) {
+        if (!this.instance) this.instance = new this(...args);
+        return this.instance;
+    }
+}
+
+import type * as WebViewMS from "../package/webview/src/message";
+class View {
+    private readonly webViewPanel;
+    private readonly webView;
+    private readonly extensionConfig;
+
+    private activeFilePath?: string;
+    private baseData: {
         serverURL?: string;
         watch: boolean;
         serverRootDir: string;
@@ -56,45 +172,97 @@ class ComponentPreview {
         workspaceFolderDir: string;
         autoReload: boolean;
     };
-    activeFile?: string;
-    workspaceFolder: vscode.WorkspaceFolder;
-    wsFolderExtensionConfig: vscode.WorkspaceConfiguration;
-    private constructor(workspaceFolder: vscode.WorkspaceFolder) {
-        var config = vscode.workspace.getConfiguration("ComponentPreviewer", workspaceFolder);
-        this.wsFolderExtensionConfig = config;
-
-        var serverRootDir = <string | null>config.get("serverRootDir");
-        this.workspaceFolder = workspaceFolder;
-        var workspaceFolderDir = workspaceFolder.uri.fsPath;
-        this.baseData = {
-            serverURL: config.get("serverURL"),
-            /** 相对于workspaceFolderDir */
-            serverRootDir: serverRootDir ? serverRootDir : "",
-            watch: false,
-            workspaceFolderName: workspaceFolder.name,
-            workspaceFolderDir,
-            autoReload: false,
-        };
+    close() {
+        this.webViewPanel.dispose();
     }
-    /** webView收到通知会触发的函数 */
-    message(command: string, context: any) {
-        var data = this.baseData;
+    click() {
+        //todo
+    }
+    constructor(
+        folder: vscode.WorkspaceFolder,
+        onWebViewPanelClose: (...args: any) => any,
+        private setBarInfo: Function
+    ) {
+        {
+            this.extensionConfig = vscode.workspace.getConfiguration("ComponentPreviewer", folder);
+
+            var serverRootDir = <string | null>this.extensionConfig.get("serverRootDir");
+            var workspaceFolderDir = folder.uri.fsPath;
+            this.baseData = {
+                serverURL: this.extensionConfig.get("serverURL"),
+                /** 相对于workspaceFolderDir */
+                serverRootDir: serverRootDir ? serverRootDir : "",
+                watch: false,
+                workspaceFolderName: folder.name,
+                workspaceFolderDir,
+                autoReload: false,
+            };
+        }
+
+        {
+            const resUri = vscode.Uri.joinPath(extContext.extensionUri, "out/res/webview");
+            //初始化webView
+            const webViewPanel = vscode.window.createWebviewPanel(
+                "catCoding",
+                "CPrev: " + folder.name,
+                vscode.ViewColumn.Beside,
+                {
+                    enableScripts: true,
+                    localResourceRoots: [resUri],
+                }
+            );
+            this.webViewPanel = webViewPanel;
+            const webview = webViewPanel.webview;
+            this.webView = webview;
+
+            let jsURI = vscode.Uri.joinPath(resUri, "index.js");
+
+            let jsWebViewURI = webview.asWebviewUri(jsURI);
+            webview.html = `<!DOCTYPE html>
+                <html lang="en">
+                    <head>
+                        <meta charset="UTF-8" />
+                        <title>Component Preview</title>
+                        <style>
+                            html,
+                            body {
+                                margin: 0;
+                                padding: 0;
+                                height: 100%;
+                            }
+                        </style>
+                    </head>
+                    <body></body>
+                    <script src=${jsWebViewURI}  type="module"></script>
+                </html>`;
+            webview.onDidReceiveMessage(this.onReceiveMessage, this);
+            webViewPanel.onDidDispose(onWebViewPanelClose);
+        }
+    }
+    private onReceiveMessage(rsData: WebViewMS.webviewMessage) {
+        if (!rsData || typeof rsData !== "object" || typeof rsData.command !== "string") {
+            errorMessage("Error message:" + rsData);
+            return;
+        }
+        const command = rsData.command;
+        const context = rsData.context;
+
+        const data = this.baseData;
         switch (command) {
             case "watch":
                 if (context === data.watch) return;
                 data.watch = context;
-                if (!context) this.activeFile = "";
-                ComponentPreview.onActiveTextEditorChange();
+                if (context) this.onActiveFileSave();
                 break;
             case "updateURL":
                 if (context === data.serverURL) return;
                 data.serverURL = context;
-                if (typeof context === "string") this.wsFolderExtensionConfig.update("serverURL", context);
+                if (typeof context === "string") this.extensionConfig.update("serverURL", context);
                 break;
             case "updateServerRootDir":
                 if (context === data.serverRootDir) return;
                 data.serverRootDir = context;
-                this.wsFolderExtensionConfig.update("serverRootDir", context);
+                this.extensionConfig.update("serverRootDir", context);
                 break;
             case "install":
                 this.installNodeModule();
@@ -103,15 +271,15 @@ class ComponentPreview {
                 this.baseData.autoReload = context;
 
             case "fin":
-                ComponentPreview.webview?.postMessage({ command: "vsUpdate", arg: this.baseData });
+                this.sendMessage("vsUpdate", this.baseData);
                 break;
             default:
                 break;
         }
     }
-    async updateBridgeFile(activeFile: string) {
-        this.activeFile = activeFile;
-        var { serverRootDir, workspaceFolderDir } = this.baseData;
+    private async updateBridgeFile(activeFile: string) {
+        this.activeFilePath = activeFile;
+        var { serverRootDir, workspaceFolderDir, workspaceFolderName } = this.baseData;
         var absServerRootDir = path.join(workspaceFolderDir, serverRootDir);
         activeFile = path.relative(absServerRootDir, activeFile);
         if (path.sep === "\\") {
@@ -149,7 +317,7 @@ class ComponentPreview {
             // previewRoot: string;
             let bridgeFileData = `{
     workSpaceFolder: "${workspaceFolderDir}",
-    workspaceFolderName:"${this.workspaceFolder.name}",
+    workspaceFolderName:"${workspaceFolderName}",
     activeFile:"${activeFile}",
     absServerRootDir: "${absServerRootDir}",
     previewRoot: "${previewRoot}",
@@ -164,32 +332,37 @@ exports.${exportName}= exports.${exportName};`;
         }
         {
             let actModPathNoEx = path.join(previewRoot, "bridge", "activeModule");
-            let relActFile = path.relative(path.join(previewRoot, "bridge"), this.activeFile).replaceAll("\\", "/");
+            let relActFile = path.relative(path.join(previewRoot, "bridge"), this.activeFilePath).replaceAll("\\", "/");
             let activeModuleData_js = 'import * as all from "' + relActFile + '";\nexport default all;';
             let activeModuleData_cjs = 'exports.default= require("' + relActFile + '").default;';
             var activeModuleWitePromise = witeFile(activeModuleData_js, activeModuleData_cjs, actModPathNoEx);
         }
-        ComponentPreview.webview?.postMessage("onActiveFileChange")
-        dev.infoMessage("更新文件" + activeFile);
+        this.webView.postMessage("onActiveFileChange");
         return Promise.all([bridgeFileWitePromise, activeModuleWitePromise]);
     }
-    onActiveFileUpdate() {
-        const active = ComponentPreview.acitve;
-        var activeFile = active.TextEditor?.document.uri.fsPath;
-        if (this.baseData.watch && active.folder && activeFile && activeFile !== this.activeFile)
-            this.updateBridgeFile(activeFile);
+    sendMessage(command: keyof WebViewMS.extContexts, arg?: any) {
+        this.webView.postMessage({ command, arg });
+    }
+    onChangeActiveFile(textEditor: vscode.TextEditor) {
+        //todo
+        var activeFile = textEditor.document.uri.fsPath;
+        if (this.baseData.watch && activeFile && activeFile !== this.activeFilePath) infoMessage(activeFile); //this.updateBridgeFile(activeFile);
+    }
+    onActiveFileSave() {
+        this.baseData.autoReload && this.sendMessage("reload");
     }
     /** 向工作区安装依赖文件 */
     async installNodeModule() {
-        var ExtensionPath = ComponentPreview.ExtensionPath;
-
         var { workspaceFolderDir, serverRootDir } = this.baseData;
-        var res = path.join(ExtensionPath, "res", "preview");
+        const remotefs=vscode.workspace.fs;   //支持本地和远程的文件系统
+        //todo: URI的支持
         var dist = path.join(workspaceFolderDir, serverRootDir, ".preview");
         await fse.ensureDir(dist);
         function copyFailed(path: string, err: Error) {
             errorMessage(`Failed to install ${path} \n May not have access`);
         }
+        var resUri = vscode.Uri.joinPath(extContext.extension.extensionUri, "out/res/preview");
+        var res = resUri.fsPath;
         var ps: Promise<void>[] = [];
         {
             //复制index.html和main.js
@@ -220,158 +393,6 @@ exports.${exportName}= exports.${exportName};`;
         }
         await ps;
         infoMessage("Succeeded in installing " + dist);
-        if (this.activeFile) this.updateBridgeFile(this.activeFile);
-    }
-    private static created = new Map<string, ComponentPreview>();
-    private static webview: Webview | null;
-    /** 当前扩展的绝对路径 */
-    private static ExtensionPath: string;
-    static acitve = {
-        folder: <WorkspaceFolder | undefined>undefined,
-        TextEditor: <vscode.TextEditor | undefined>undefined,
-        /** 活动的工作区文件夹对应的ComponentPreview实例 */
-        ComponentPreview: <ComponentPreview | undefined>undefined,
-    };
-
-    private static listen = new Set<string>([".TSX", ".JSX", ".VUE"]);
-    /** 文本编辑器切换钩子函数 */
-    private static onActiveTextEditorChange() {
-        var acitve = this.acitve;
-        acitve.TextEditor = vscode.window.activeTextEditor;
-        if (!acitve.TextEditor) return; //不存在活动文本编辑器
-
-        const activateFolder = getActiveFolder();
-        acitve.folder = activateFolder;
-        if (!activateFolder) return; //不存在活动工作区文件夹
-
-        let actCPV = acitve.ComponentPreview;
-        var NextCPV = this.created.get(activateFolder.uri.fsPath);
-        if (!NextCPV) {
-            //进入新的工作区
-            NextCPV = this.getInstane(activateFolder);
-            this.show(NextCPV, true);
-        } else if (NextCPV !== actCPV) this.show(NextCPV, true); //进入不同工作区
-
-        {
-            let activeFile = acitve.TextEditor.document.fileName;
-            let ext: string = <any>path.basename(activeFile).match(/\.[^\.]+$/);
-            if (!ext) return;
-            else ext = ext[0].toLocaleUpperCase();
-            if (this.listen.has(ext)) NextCPV.onActiveFileUpdate();
-        }
-    }
-    /**
-     * todo
-     * @description 更新活动文件
-     * @param activeFile 活动文件的绝对路径
-     */
-    private static onDidSaveTextDocument() {
-        let activeFile = this.acitve.TextEditor?.document.fileName;
-        if (!activeFile) return;
-        let ext: string = <any>path.basename(activeFile).match(/\.[^\.]+$/);
-        if (!ext) return;
-        else ext = ext[0].toLocaleUpperCase();
-        if (this.listen.has(ext)) {
-            this.webview?.postMessage({ command: "onActiveFileChange" });
-            dev.infoMessage("更新文件");
-        }
-    }
-    private static onWebViewClosed() {
-        this.webview = null;
-        this.created.clear();
-        this.acitve = <any>{};
-    }
-    private static onReceiveMessage(data: any) {
-        var acitve = this.acitve;
-        if (!data || typeof data !== "object") {
-            errorMessage("Error message:" + data);
-        } else if (acitve.ComponentPreview) {
-            acitve.ComponentPreview.message(data.command, data.context);
-        } else {
-            errorMessage("An error was encountered.");
-        }
-    }
-    private static createWebView() {
-        let panel = vscode.window.createWebviewPanel("catCoding", "Preview", vscode.ViewColumn.Beside, {
-            enableScripts: true,
-            localResourceRoots: [vscode.Uri.file(path.join(this.ExtensionPath, "res", "webview"))],
-        });
-        const webview = panel.webview;
-
-        let jsURI = vscode.Uri.file(path.join(this.ExtensionPath, "res", "webview", "index.js"));
-
-        let jsWebViewURI = webview.asWebviewUri(jsURI);
-        webview.html = `<!DOCTYPE html>
-        <html lang="en">
-            <head>
-                <meta charset="UTF-8" />
-                <title>Component Preview</title>
-                <style>
-                    html,
-                    body {
-                        margin: 0;
-                        padding: 0;
-                        height: 100%;
-                    }
-                </style>
-            </head>
-            <body></body>
-            <script src=${jsWebViewURI}  type="module"></script>
-        </html>`;
-        webview.onDidReceiveMessage(this.onReceiveMessage, this);
-        panel.onDidDispose(this.onWebViewClosed, this);
-        return panel;
-    }
-
-    /**
-     * 监听编辑器切换
-     * 监听文件保存
-     * @param path 插件路径
-     */
-    static async init(path: string) {
-        if (this.webview) return;
-        this.ExtensionPath = path;
-
-        vscode.window.onDidChangeActiveTextEditor(this.onActiveTextEditorChange, this);
-        vscode.workspace.onDidSaveTextDocument(this.onDidSaveTextDocument, this);
-    }
-    /** 显示指定的CPD */
-    static show(CPD: ComponentPreview, sendData?: boolean) {
-        const acitve = this.acitve;
-        if (!this.webview) return;
-        const actCPV = acitve.ComponentPreview;
-        if (actCPV === CPD) return;
-        acitve.ComponentPreview = CPD;
-        if (sendData) this.webview.postMessage({ command: "vsUpdate", arg: CPD.baseData });
-    }
-    static getInstane(workspaceFolderath: vscode.WorkspaceFolder) {
-        const CPD = new ComponentPreview(workspaceFolderath);
-
-        this.created.set(workspaceFolderath.uri.fsPath, CPD);
-        return CPD;
-    }
-    static open() {
-        if (this.webview) {
-            // infoMessage("预览窗口已经打开");
-            return;
-        }
-
-        var activeWorkspaceFolder = getActiveFolder();
-        if (!activeWorkspaceFolder) {
-            infoMessage("You have to open a workspace folder");
-            return;
-        }
-
-        let panel = this.createWebView();
-        this.webview = panel.webview;
-
-        this.show(this.getInstane(activeWorkspaceFolder));
+        if (this.activeFilePath) this.updateBridgeFile(this.activeFilePath);
     }
 }
-
-export async function activate(context: ExtensionContext) {
-    await ComponentPreview.init(context.extensionUri.fsPath);
-    vscode.commands.registerCommand("ComponentPreviewer.openView", ComponentPreview.open, ComponentPreview);
-}
-
-export function deactivate() {}

@@ -6,35 +6,14 @@ export const comm = common.default(h, React.Component); //React和Vue的共有�
 
 /** 直接导入bridge/activeModule (预览的是当前活动文件) */
 export async function renderFromActiveModule() {
-    var mod = await import("../bridge/activeModule");
+    try {
+        var mod: any = await import("../bridge/activeModule");
+    } catch (error) {
+        mod = { default: { default: comm.ErrorTemplate("无法加载activeModule") } };
+    }
     render(mod.default);
 }
-/** 自动导入 (最终预览的是文件映射) */
-export function autoRender() {
-    return renderFromFileURL(common.getActiveFileMap());
-}
-/**
- * @param activeFile 你要显示的组件相对路径
- */
-export async function renderFromFileURL(activeFile: string | Promise<string>) {
-    try {
-        if (activeFile instanceof Promise) activeFile = await activeFile;
-        try {
-            var mod = await import(activeFile);
-        } catch (error) {
-            let e = (error as any).toString();
-            mod = { default: comm.ErrorTemplate(e) };
-            console.error(error);
-        }
-    } catch (error) {
-        let e = (error as any).toString();
-        mod = { default: comm.ErrorTemplate(e) };
-        console.error(error);
-    }
-    render(mod);
-}
-
-export async function render(mod: any, url?: string) {
+export async function render(mod: any, url: string = "unknow") {
     const root = document.createElement("div");
     document.body.appendChild(root);
     root.style.height = "100%";
@@ -50,9 +29,6 @@ export async function render(mod: any, url?: string) {
         }
         return false;
     }
-    var previewList = common.getVDOMList(mod, h, isCPN, url);
-    let Temp=comm.HOME as any
-    const App = <Temp instanceList={previewList}></Temp>;
-
+    const App = <comm.HOME mod={mod} url={url} isCommponent={isCPN}></comm.HOME>;
     ReactDOM.createRoot(root).render(App);
 }

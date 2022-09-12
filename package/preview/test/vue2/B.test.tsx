@@ -1,6 +1,7 @@
-import React from "react";
-import Vue from "Vue";
+import * as Vue from "vue";
+// import React from "react";
 const h = Vue.h;
+
 type Bprops = {
     data1: string;
 };
@@ -26,7 +27,7 @@ style.insertRule(`@keyframes float {
   }
 }`);
 
-export default function A(props: Bprops) {
+function A(props: Bprops) {
     var time = 2;
     return (
         <div
@@ -137,4 +138,8 @@ export default function A(props: Bprops) {
             </div>
         </div>
     );
+}
+
+export default function TestCase1() {
+    return <B data1="Test case - data 1"></B>;
 }

@@ -1,2 +1,2 @@
-import all from "./def";
+import all from "./bridgeFile";
 export default all;

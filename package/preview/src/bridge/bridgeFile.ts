@@ -8,7 +8,7 @@ export var data = {
     /** 预览文件夹根目录, 相对于serverRootDir*/
     previewRoot: "public",
     /** 工作文件绝对路径(相对于absServerRootDir) */
-    activeFile: "test/vue/A.tsx",
+    activeFile: "test/react/A.test.tsx",
 };
 
 export default data;

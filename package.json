@@ -2,6 +2,7 @@
     "name": "componentpreviewer",
     "displayName": "Component Previewer",
     "publisher": "Asnow",
+    "license": "MIT",
     "description": "Preview React/Vue components more easily",
     "repository": "https://github.com/Asnow-c/ComponentPreviewer",
     "icon": "res/icon/logo_128.png",
@@ -18,15 +19,15 @@
     ],
     "version": "0.0.1",
     "engines": {
-        "vscode": "^1.60.0"
+        "vscode": "^1.63.0"
     },
     "categories": [
         "Debuggers"
     ],
     "activationEvents": [
-        "*"
+        "workspaceContains:"
     ],
-    "main": "./dist/extension.js",
+    "main": "./out/extension.js",
     "targets": {
         "main": false
     },
@@ -34,31 +35,22 @@
         "commands": [
             {
                 "command": "ComponentPreviewer.openView",
-                "title": "组件预览",
+                "title": "%cmd.openView%",
                 "icon": "$(default-view-icon)",
                 "category": "ComponentPreviewer"
             }
         ],
-        "menus": {
-            "editor/title": [
-                {
-                    "command": "ComponentPreviewer.openView",
-                    "group": "navigation",
-                    "when": "editorLangId == typescriptreact || editorLangId == javascriptreact || editorLangId == vue"
-                }
-            ]
-        },
         "configuration": {
             "title": "Component Previewer",
             "properties": {
                 "ComponentPreviewer.serverURL": {
-                    "description": "Local Server URL",
+                    "description": "%setting.serverURL.desc%",
                     "type": "string",
                     "default": "http://localhost:5173/.preview/index.html",
                     "scope": "resource"
                 },
                 "ComponentPreviewer.serverRootDir": {
-                    "description": "Dependent installation location (relative to workspace folder)",
+                    "description": "%setting.serverRootDir.desc%",
                     "type": "string",
                     "scope": "resource",
                     "default": ""
@@ -67,8 +59,13 @@
         }
     },
     "scripts": {
-        "watch": "tsc -watch",
-        "build": "tsc -p tsconfig-build.json"
+        "build": "buildExt & buildPreview & buildWebView",
+        "watchExt": "tsc -watch",
+        "buildExt": "tsc",
+        "watchPreview": "tsc --watch -p ./package/preview/tsconfig.json",
+        "buildPreview": "tsc -p ./package/preview/tsconfig.json",
+        "watchWebView": "vite build -c ./package/webview/vite.config.ts --watch",
+        "buildWebView": "vite build -c ./package/webview/vite.config.ts"
     },
     "devDependencies": {
         "@types/fs-extra": "^9.0.13",
