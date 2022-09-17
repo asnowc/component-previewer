@@ -148,15 +148,6 @@ export const icon = {
 
 type CPN = string | React.FunctionComponent<any> | React.ComponentClass<any, any>;
 export const UI = {
-    mouseOverUI3: {
-        data() {
-            return {
-                mouseOver: false,
-                mouseDown: false,
-            };
-        },
-        methods: {},
-    },
     mouseOverUI(
         props: {
             Element: CPN;
@@ -174,20 +165,23 @@ export const UI = {
         var mouseOverStyle = props.MouseOverStyle;
         const [mouseOver, setMouseOver] = useState(false);
         const [mouseDown, setMouseDown] = useState(false);
-        const _this = useMemo(function () {
-            return {
-                onMouseOver() {
-                    setMouseOver(!mouseOver);
-                    _this.mouseOver = !_this.mouseOver;
-                },
-                onMouseDown() {
-                    setMouseDown(!mouseDown);
-                    _this.mouseDown = !_this.mouseDown;
-                },
-                mouseDown,
-                mouseOver,
-            };
-        }, []);
+        const _this = useMemo(
+            function () {
+                return {
+                    onMouseOver() {
+                        setMouseOver(!mouseOver);
+                        _this.mouseOver = !_this.mouseOver;
+                    },
+                    onMouseDown() {
+                        setMouseDown(!mouseDown);
+                        _this.mouseDown = !_this.mouseDown;
+                    },
+                    mouseDown,
+                    mouseOver,
+                };
+            },
+            [mouseDown, mouseOver]
+        );
 
         nextProps.style = Object.assign({}, nextProps.style);
         if (_this.mouseDown) nextProps.style = Object.assign(nextProps.style, mouseDownStyle);

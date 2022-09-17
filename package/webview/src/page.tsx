@@ -2,27 +2,26 @@ import * as ReactDOM from "react-dom/client";
 import * as React from "react";
 import { createElement, useCallback, useMemo } from "react";
 import { icon, UI } from "./baseUI";
+import type * as message from "./message";
+import * as Ilang from "./lang";
 
-declare function acquireVsCodeApi(): any;
+declare namespace globalThis {
+    const acquireVsCodeApi: (() => any) | undefined;
+}
+declare var langFlag: Ilang.langTypeList;
 type obj = { [key: string | number | symbol]: any };
-var vscode: any;
-try {
-    let warn = console.warn;
-    console.warn = function (e) {
-        if (
-            e !==
-            "[Vue warn]: Non-function value encountered for default slot. Prefer function slots for better performance."
-        )
-            warn(e);
+var postMessage: (command: keyof message.webViewContexts, context?: any) => any;
+if (globalThis.acquireVsCodeApi) {
+    let vscode = globalThis.acquireVsCodeApi();
+    postMessage = function (command: string, context: any) {
+        vscode.postMessage({ command, context });
     };
-    vscode = acquireVsCodeApi();
     console.log = function () {};
-} catch (error) {
+} else {
+    var langFlag = "zh" as Ilang.langTypeList;
     //浏览器环境, 用来调试
-    vscode = {
-        postMessage(data: any) {
-            console.log("send:" + JSON.stringify(data));
-        },
+    postMessage = function postMessage(command: string, context: any) {
+        console.log("send:" + JSON.stringify({ command, context }));
     };
 }
 
@@ -34,13 +33,15 @@ function IB(props: JSX.IntrinsicElements["abbr"]) {
     return createElement("div", props, props.children);
 }
 
-class Head extends React.Component {
-    constructor(props: {}) {
+class Head extends React.Component<{ lang?: Ilang.langTypeList }> {
+    constructor(props: Head["props"]) {
         super(props);
+        this.state.lang = Ilang.getLang(props.lang ?? "zh");
     }
     readonly iframeRef = React.createRef<HTMLIFrameElement>();
     render() {
         const state = this.state;
+        const { effect, lang } = state;
         var headHeight = 30;
 
         var headIBstyle = {
@@ -66,29 +67,26 @@ class Head extends React.Component {
                                 onClick={this.refesh.bind(this)}
                             ></UI.mouseOverUI>
                         </IB>
-                        <IB
-                            title="Auto reload ( If your Web server supports Hot Module Replacement, it is recommended to keep it turned off )"
-                            style={headIBstyle}
-                        >
+                        <IB title={lang["自动刷新(如果web服务器支持HMR, 则不需要开启)"]} style={headIBstyle}>
                             <UI.mouseOverUI
                                 Element={icon.autoReload}
                                 MouseDownStyle={{ opacity: "0.7" }}
                                 onClick={this.changeAutoReload.bind(this)}
-                                color={state.autoReload ? "#10cdfd" : undefined}
+                                color={effect.autoReload ? "#10cdfd" : undefined}
                             ></UI.mouseOverUI>
                         </IB>
                     </div>
-                    <b>{state.workspaceFolderName}</b>
+                    <b>{effect.workspaceFolderName}</b>
                     <div>
-                        <IB title="toggle watch" style={headIBstyle}>
+                        <IB title={lang["切换监听状态"]} style={headIBstyle}>
                             <UI.mouseOverUI
                                 Element={icon.watch}
                                 MouseDownStyle={{ opacity: "0.7" }}
                                 onClick={this.changeWatch.bind(this)}
-                                color={state.watch ? "#10cdfd" : undefined}
+                                color={effect.watch ? "#10cdfd" : undefined}
                             ></UI.mouseOverUI>
                         </IB>
-                        <IB title="setting" style={headIBstyle}>
+                        <IB title={lang["设置"]} style={headIBstyle}>
                             <UI.mouseOverUI
                                 Element={icon.setting}
                                 MouseDownStyle={{ opacity: "0.7" }}
@@ -100,59 +98,59 @@ class Head extends React.Component {
 
                 <iframe
                     ref={this.iframeRef}
-                    src={state.serverURL}
+                    src={effect.serverURL}
                     name="iframe_view"
                     frameBorder="0"
                     style={{ width: "100%", height: `calc(100% - ${headHeight + 5}px)` }}
                 ></iframe>
-                {state.showSetting ? (
-                    <Setting setState={this.setState.bind(this)} state={this.state} onClose={this.setting.bind(this)}></Setting>
-                ) : undefined}
+                {state.showSetting && <Setting instance={this} onClose={this.setting.bind(this)}></Setting>}
             </>
         );
     }
+
+    state = {
+        effect: {
+            serverURL: "",
+            serverRootDir: "",
+            watch: false,
+            workspaceFolderDir: "",
+            workspaceFolderName: "Unknown",
+            autoReload: false,
+        },
+        lang: undefined as any as Ilang.LangMap,
+        showSetting: false,
+    };
     componentDidMount(): void {
         window.addEventListener("message", this.vscodeMessage);
-        vscode.postMessage({ command: "fin" });
+        postMessage("fin");
     }
     componentWillUnmount(): void {
         window.removeEventListener("message", this.vscodeMessage);
     }
-    state: Readonly<{
-        serverURL: string;
-        serverRootDir: string;
-        watch: boolean;
-        showSetting: boolean;
-        workspaceFolderDir: string;
-        workspaceFolderName: string;
-        autoReload: boolean;
-    }> = {
-        serverURL: "",
-        serverRootDir: "",
-        watch: false,
-        showSetting: false,
-        workspaceFolderDir: "",
-        workspaceFolderName: "Unknown",
-        autoReload: false,
-    };
+
+    setEffectConfi(effect: typeof this.state.effect) {
+        this.setState({ effect });
+    }
     refesh() {
         //刷新内联框架
         var iframe = this.iframeRef.current!;
         window.open(iframe.src, iframe.name, "");
     }
     onActiveFileChange() {
-        if (this.state.autoReload) this.refesh();
+        if (this.state.effect.autoReload) this.refesh();
     }
 
     changeWatch() {
-        const state = this.state;
+        const effect = this.state.effect;
         //切换监听状态并发送数据
-        this.setState({ watch: !state.watch });
+        this.setEffectConfi({ ...effect, watch: !effect.watch });
 
-        vscode.postMessage({
-            command: "watch",
-            context: !state.watch,
-        });
+        postMessage("watch", !effect.watch);
+    }
+    changeAutoReload() {
+        const effect = this.state.effect;
+        this.setEffectConfi({ ...effect, autoReload: !effect.autoReload });
+        postMessage("autoReload", !effect.autoReload);
     }
 
     vsUpdate(data: any) {
@@ -169,56 +167,49 @@ class Head extends React.Component {
         const state = this.state;
         this.setState({ showSetting: !state.showSetting });
     }
-    changeAutoReload() {
-        const state = this.state;
-        this.setState({ autoReload: !state.autoReload });
-    }
 }
-
-function Setting(props: {
-    state: Head["state"];
-    setState: (data: Partial<Head["state"]>) => any;
-    onClose?: (...arg: any) => any;
-}) {
-    const { state, setState } = props;
+function Setting(props: { instance: Head; onClose?: (...arg: any) => any }) {
+    const { instance } = props;
+    const { state } = instance;
+    const { effect, lang } = state;
 
     const installDir = useMemo(
         function () {
-            var dp = state.workspaceFolderDir + "/" + (state.serverRootDir ? state.serverRootDir : "") + "/.preview";
+            var dp = effect.workspaceFolderDir + "/" + (effect.serverRootDir ? effect.serverRootDir : "") + "/.preview";
             return dp.replace(/[\\/]+/g, "/");
         },
-        [state.workspaceFolderDir, state.serverRootDir]
+        [effect.workspaceFolderDir, effect.serverRootDir]
     );
     const install = useCallback(function () {
-        vscode.postMessage({ command: "install" });
+        postMessage("install");
     }, []);
-    const updateRoot = useCallback(function (e: React.FocusEvent<HTMLInputElement>) {
-        //根路径并发送数据
-        const dom = e.target;
-        var value = dom.value;
-        var rootDir = state.serverRootDir;
-        if (rootDir === value) return;
-        setState({ serverRootDir: value });
-        vscode.postMessage({
-            command: "updateServerRootDir",
-            context: value,
-        });
-    }, []);
-    const updateURL = useCallback(function (e: React.FocusEvent<HTMLInputElement>) {
-        //更改URL并发送数据
-        const dom = e.target;
-        var value = dom.value;
-        var url = state.serverURL;
-        if (url === value) return;
-        if (!value.match(/^\w+:\/\/.+(:\d+)?$/)) dom.value = url;
-        else {
-            setState({ serverURL: value });
-            vscode.postMessage({
-                command: "updateURL",
-                context: value,
-            });
-        }
-    }, []);
+    const updateRoot = useCallback(
+        function (e: React.FocusEvent<HTMLInputElement>) {
+            //根路径并发送数据
+            const dom = e.target;
+            var value = dom.value;
+            var rootDir = effect.serverRootDir;
+            if (rootDir === value) return;
+            instance.setState({ serverRootDir: value });
+            postMessage("updateServerRootDir", value);
+        },
+        [effect.serverRootDir]
+    );
+    const updateURL = useCallback(
+        function (e: React.FocusEvent<HTMLInputElement>) {
+            //更改URL并发送数据
+            const dom = e.target;
+            var value = dom.value;
+            var url = effect.serverURL;
+            if (url === value) return;
+            if (!value.match(/^\w+:\/\/.+(:\d+)?$/)) dom.value = url;
+            else {
+                instance.setState({ serverURL: value });
+                postMessage("updateURL", value);
+            }
+        },
+        [effect.serverURL]
+    );
     return (
         <div
             style={{
@@ -245,7 +236,7 @@ function Setting(props: {
             >
                 <div style={{ height: "calc(100% - 30px)" }}>
                     <div style={{ textAlign: "center", fontSize: "24px", marginBottom: "15px" }}>
-                        {state.workspaceFolderName}
+                        {effect.workspaceFolderName}
                     </div>
                     <span style={{ fontSize: "13px", fontWeight: "bold" }}>
                         Server root Directory: ( Relative to the workspace folder )
@@ -254,11 +245,11 @@ function Setting(props: {
                         <input
                             style={{ width: "300px", margin: "5px 0" }}
                             type="text"
-                            defaultValue={state.serverRootDir}
+                            defaultValue={effect.serverRootDir}
                             onBlur={updateRoot}
                         />
                         <IB
-                            title="install"
+                            title={lang["安装"]}
                             style={{
                                 position: "relative",
                                 top: "7px",
@@ -273,7 +264,7 @@ function Setting(props: {
                             ></UI.mouseOverUI>
                         </IB>
                     </div>
-                    {state.workspaceFolderDir ? `Dependency packages will be installed to "${installDir}"` : ""}
+                    {effect.workspaceFolderDir ? lang['依赖将被安装到 "'] + installDir + '"' : ""}
                     <br />
                     <br />
                     <span style={{ fontSize: "13px", fontWeight: "bold" }}>Server URL: </span>
@@ -281,11 +272,11 @@ function Setting(props: {
                     <input
                         style={{ width: "300px", margin: "5px 0" }}
                         type="text"
-                        defaultValue={state.serverURL}
+                        defaultValue={effect.serverURL}
                         onBlur={updateURL}
                     />
                     <br />
-                    Enter "{state.serverURL}" in the browser to automatically preview the components
+                    {lang['在浏览器输入 "'] + effect.serverURL + lang['" 将自动预览组件']}
                 </div>
                 <UI.mouseOverUI
                     onClick={props.onClose}
@@ -305,24 +296,12 @@ function Setting(props: {
                         opacity: "0.8",
                     }}
                 >
-                    Close
+                    {lang["关闭"]}
                 </UI.mouseOverUI>
             </div>
         </div>
     );
 }
-
-/* 消息事件:
-            message:
-
-            发送:
-                command="watch", {context:"watch"|"unwatch"}
-                command="updateURL", {context:string}
-                command="updateRootDir",{context:string}
-        */
-// function KD(props: Vue.HTMLAttributes, { slots }: Vue.SetupContext) {
-//     return <div>{slots?slots:["dsg"]}</div>;
-// }
 
 var div = document.createElement("div");
 div.style.height = "100%";
@@ -330,4 +309,4 @@ div.style.backgroundColor = "#FFF";
 div.style.color = "#000";
 document.body.appendChild(div);
 
-ReactDOM.createRoot(div).render(<Head />);
+ReactDOM.createRoot(div).render(<Head lang={langFlag} />);
