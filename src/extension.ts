@@ -157,21 +157,14 @@ class StatusBarDispatcher {
     }
 }
 
-import type * as WebViewMS from "../package/webview/src/message";
-class View {
+import * as MS from "../package/webview/src/message";
+class View implements MS.ext.msStruct {
     private readonly webViewPanel;
     private readonly webView;
     private readonly extensionConfig;
 
     private activeFilePath?: string;
-    private baseData: {
-        serverURL?: string;
-        watch: boolean;
-        serverRootDir: string;
-        workspaceFolderName: string;
-        workspaceFolderDir: string;
-        autoReload: boolean;
-    };
+    private baseData: MS.baseData;
     close() {
         this.webViewPanel.dispose();
     }
@@ -189,9 +182,9 @@ class View {
             var serverRootDir = <string | null>this.extensionConfig.get("serverRootDir");
             var workspaceFolderDir = folder.uri.fsPath;
             this.baseData = {
-                serverURL: this.extensionConfig.get("serverURL"),
+                serverURL: this.extensionConfig.get("serverURL") ?? "",
                 /** 相对于workspaceFolderDir */
-                serverRootDir: serverRootDir ? serverRootDir : "",
+                serverRootDir: serverRootDir ?? "",
                 watch: false,
                 workspaceFolderName: folder.name,
                 workspaceFolderDir,
@@ -235,46 +228,8 @@ class View {
                     <body></body>
                     <script src=${jsWebViewURI}  type="module"></script>
                 </html>`;
-            webview.onDidReceiveMessage(this.onReceiveMessage, this);
+            webview.onDidReceiveMessage(this.onMessage, this);
             webViewPanel.onDidDispose(onWebViewPanelClose);
-        }
-    }
-    private onReceiveMessage(rsData: WebViewMS.webviewMessage) {
-        if (!rsData || typeof rsData !== "object" || typeof rsData.command !== "string") {
-            errorMessage("Error message:" + rsData);
-            return;
-        }
-        const command = rsData.command;
-        const context = rsData.context;
-
-        const data = this.baseData;
-        switch (command) {
-            case "watch":
-                if (context === data.watch) return;
-                data.watch = context;
-                if (context) this.onActiveFileSave();
-                break;
-            case "updateURL":
-                if (context === data.serverURL) return;
-                data.serverURL = context;
-                if (typeof context === "string") this.extensionConfig.update("serverURL", context);
-                break;
-            case "updateServerRootDir":
-                if (context === data.serverRootDir) return;
-                data.serverRootDir = context;
-                this.extensionConfig.update("serverRootDir", context);
-                break;
-            case "install":
-                this.installNodeModule();
-                break;
-            case "autoReload":
-                this.baseData.autoReload = context;
-
-            case "fin":
-                this.sendMessage("vsUpdate", this.baseData);
-                break;
-            default:
-                break;
         }
     }
     private async updateBridgeFile(activeFile: string) {
@@ -340,8 +295,40 @@ exports.${exportName}= exports.${exportName};`;
         this.webView.postMessage("onActiveFileChange");
         return Promise.all([bridgeFileWitePromise, activeModuleWitePromise]);
     }
-    sendMessage(command: keyof WebViewMS.extContexts, arg?: any) {
-        this.webView.postMessage({ command, arg });
+    onMessage(data: MS.ext.onMsData): void {
+        if (typeof data?.command !== "string") {
+            errorMessage("Error message:" + data);
+            return;
+        }
+        const ct = data.context;
+        const command = data.command;
+        const excFx: Function = this[command];
+        excFx(...ct);
+    }
+    updateBaseData<T extends keyof MS.baseData>(dataName: T, value: MS.baseData[T]) {
+        const data = this.baseData;
+        switch (dataName) {
+            case "watch":
+                if (value === data.watch) return;
+                data.watch = value as boolean;
+                if (value) this.onActiveFileSave();
+                break;
+            case "serverURL":
+                if (value === data.serverURL) return;
+                data.serverURL = value as string;
+                if (typeof value === "string") this.extensionConfig.update("serverURL", value);
+                break;
+            case "serverRootDir":
+                if (value === data.serverRootDir) return;
+                data.serverRootDir = value as string;
+                this.extensionConfig.update("serverRootDir", value);
+                break;
+            case "autoReload":
+                data.autoReload = value as boolean;
+        }
+    }
+    sendMessage<T extends keyof MS.webView.functions>(command: T, ...context: MS.webView.context<T>): void {
+        this.webView.postMessage({ command, context });
     }
     onChangeActiveFile(textEditor: vscode.TextEditor) {
         //todo
@@ -351,10 +338,13 @@ exports.${exportName}= exports.${exportName};`;
     onActiveFileSave() {
         this.baseData.autoReload && this.sendMessage("reload");
     }
+    sendBaseData() {
+        this.sendMessage("initBaseData", this.baseData);
+    }
     /** 向工作区安装依赖文件 */
     async installNodeModule() {
         var { workspaceFolderDir, serverRootDir } = this.baseData;
-        const remotefs=vscode.workspace.fs;   //支持本地和远程的文件系统
+        const remotefs = vscode.workspace.fs; //支持本地和远程的文件系统
         //todo: URI的支持
         var dist = path.join(workspaceFolderDir, serverRootDir, ".preview");
         await fse.ensureDir(dist);

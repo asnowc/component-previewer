@@ -2,7 +2,7 @@ import * as ReactDOM from "react-dom/client";
 import * as React from "react";
 import { createElement, useCallback, useMemo } from "react";
 import { icon, UI } from "./baseUI";
-import type * as message from "./message";
+import type * as MS from "./message";
 import * as Ilang from "./lang";
 
 declare namespace globalThis {
@@ -10,19 +10,40 @@ declare namespace globalThis {
 }
 declare var langFlag: Ilang.langTypeList;
 type obj = { [key: string | number | symbol]: any };
-var postMessage: (command: keyof message.webViewContexts, context?: any) => any;
+var vscode: { postMessage(data: MS.ext.onMsData): void };
 if (globalThis.acquireVsCodeApi) {
-    let vscode = globalThis.acquireVsCodeApi();
-    postMessage = function (command: string, context: any) {
-        vscode.postMessage({ command, context });
-    };
+    vscode = globalThis.acquireVsCodeApi();
     console.log = function () {};
 } else {
     var langFlag = "zh" as Ilang.langTypeList;
     //浏览器环境, 用来调试
-    postMessage = function postMessage(command: string, context: any) {
-        console.log("send:" + JSON.stringify({ command, context }));
+    vscode = {
+        postMessage(data: MS.ext.onMsData) {
+            console.log(data.command + ": " + JSON.stringify(data.context));
+        },
     };
+
+    setTimeout(() => {
+        const e = new MessageEvent("message", {
+            data: {
+                command: "initBaseData",
+                context: [
+                    {
+                        serverURL: "",
+                        serverRootDir: "",
+                        watch: false,
+                        workspaceFolderDir: "",
+                        workspaceFolderName: "Unknown",
+                        autoReload: false,
+
+                        watchFileRegExp: "",
+                        mapFileReplaceRegExp: "",
+                    } as MS.baseData,
+                ],
+            },
+        });
+        window.dispatchEvent(e);
+    }, 500);
 }
 
 /** 设置了inline-block的div */
@@ -33,7 +54,7 @@ function IB(props: JSX.IntrinsicElements["abbr"]) {
     return createElement("div", props, props.children);
 }
 
-class Head extends React.Component<{ lang?: Ilang.langTypeList }> {
+class Head extends React.Component<{ lang?: Ilang.langTypeList }> implements MS.webView.msStruct {
     constructor(props: Head["props"]) {
         super(props);
         this.state.lang = Ilang.getLang(props.lang ?? "zh");
@@ -41,7 +62,7 @@ class Head extends React.Component<{ lang?: Ilang.langTypeList }> {
     readonly iframeRef = React.createRef<HTMLIFrameElement>();
     render() {
         const state = this.state;
-        const { effect, lang } = state;
+        const { baseData, lang } = state;
         var headHeight = 30;
 
         var headIBstyle = {
@@ -50,165 +71,161 @@ class Head extends React.Component<{ lang?: Ilang.langTypeList }> {
         };
         return (
             <>
-                <div
-                    style={{
-                        height: headHeight + "px",
-                        display: "flex",
-                        justifyContent: "space-between",
-                        backgroundColor: "#e1e1e1",
-                        alignItems: "center",
-                    }}
-                >
-                    <div>
-                        <IB title="Reload" style={headIBstyle}>
-                            <UI.mouseOverUI
-                                Element={icon.reload}
-                                MouseDownStyle={{ opacity: "0.7" }}
-                                onClick={this.refesh.bind(this)}
-                            ></UI.mouseOverUI>
-                        </IB>
-                        <IB title={lang["自动刷新(如果web服务器支持HMR, 则不需要开启)"]} style={headIBstyle}>
-                            <UI.mouseOverUI
-                                Element={icon.autoReload}
-                                MouseDownStyle={{ opacity: "0.7" }}
-                                onClick={this.changeAutoReload.bind(this)}
-                                color={effect.autoReload ? "#10cdfd" : undefined}
-                            ></UI.mouseOverUI>
-                        </IB>
-                    </div>
-                    <b>{effect.workspaceFolderName}</b>
-                    <div>
-                        <IB title={lang["切换监听状态"]} style={headIBstyle}>
-                            <UI.mouseOverUI
-                                Element={icon.watch}
-                                MouseDownStyle={{ opacity: "0.7" }}
-                                onClick={this.changeWatch.bind(this)}
-                                color={effect.watch ? "#10cdfd" : undefined}
-                            ></UI.mouseOverUI>
-                        </IB>
-                        <IB title={lang["设置"]} style={headIBstyle}>
-                            <UI.mouseOverUI
-                                Element={icon.setting}
-                                MouseDownStyle={{ opacity: "0.7" }}
-                                onClick={this.setting.bind(this)}
-                            ></UI.mouseOverUI>
-                        </IB>
-                    </div>
-                </div>
+                {baseData && (
+                    <>
+                        <div
+                            style={{
+                                height: headHeight + "px",
+                                display: "flex",
+                                justifyContent: "space-between",
+                                backgroundColor: "#e1e1e1",
+                                alignItems: "center",
+                            }}
+                        >
+                            <div>
+                                <IB title="Reload" style={headIBstyle}>
+                                    <UI.mouseOverUI
+                                        Element={icon.reload}
+                                        MouseDownStyle={{ opacity: "0.7" }}
+                                        onClick={this.reload.bind(this)}
+                                    ></UI.mouseOverUI>
+                                </IB>
+                                <IB title={lang["自动刷新(如果web服务器支持HMR, 则不需要开启)"]} style={headIBstyle}>
+                                    <UI.mouseOverUI
+                                        Element={icon.autoReload}
+                                        MouseDownStyle={{ opacity: "0.7" }}
+                                        onClick={() => this.syncBaseData("autoReload", !baseData.autoReload)}
+                                        color={baseData.autoReload ? "#10cdfd" : undefined}
+                                    ></UI.mouseOverUI>
+                                </IB>
+                            </div>
+                            <b>{baseData.workspaceFolderName}</b>
+                            <div>
+                                <IB title={lang["切换监听状态"]} style={headIBstyle}>
+                                    <UI.mouseOverUI
+                                        Element={icon.watch}
+                                        MouseDownStyle={{ opacity: "0.7" }}
+                                        onClick={() => this.syncBaseData("watch", !baseData.watch)}
+                                        color={baseData.watch ? "#10cdfd" : undefined}
+                                    ></UI.mouseOverUI>
+                                </IB>
+                                <IB title={lang["设置"]} style={headIBstyle}>
+                                    <UI.mouseOverUI
+                                        Element={icon.setting}
+                                        MouseDownStyle={{ opacity: "0.7" }}
+                                        onClick={this.setting.bind(this)}
+                                    ></UI.mouseOverUI>
+                                </IB>
+                            </div>
+                        </div>
 
-                <iframe
-                    ref={this.iframeRef}
-                    src={effect.serverURL}
-                    name="iframe_view"
-                    frameBorder="0"
-                    style={{ width: "100%", height: `calc(100% - ${headHeight + 5}px)` }}
-                ></iframe>
-                {state.showSetting && <Setting instance={this} onClose={this.setting.bind(this)}></Setting>}
+                        <iframe
+                            ref={this.iframeRef}
+                            src={baseData.serverURL}
+                            name="iframe_view"
+                            frameBorder="0"
+                            style={{ width: "100%", height: `calc(100% - ${headHeight + 5}px)` }}
+                        ></iframe>
+                    </>
+                )}
+                {state.showSetting && (
+                    <Setting baseData={baseData!} instance={this} onClose={this.setting.bind(this)}></Setting>
+                )}
             </>
         );
     }
 
     state = {
-        effect: {
-            serverURL: "",
-            serverRootDir: "",
-            watch: false,
-            workspaceFolderDir: "",
-            workspaceFolderName: "Unknown",
-            autoReload: false,
-        },
+        baseData: undefined as MS.baseData | undefined,
         lang: undefined as any as Ilang.LangMap,
         showSetting: false,
     };
+    private removeListenerKey = this.onMessage.bind(this);
     componentDidMount(): void {
-        window.addEventListener("message", this.vscodeMessage);
-        postMessage("fin");
+        window.addEventListener("message", this.removeListenerKey);
+        this.sendMessage("sendBaseData");
     }
     componentWillUnmount(): void {
-        window.removeEventListener("message", this.vscodeMessage);
-    }
-
-    setEffectConfi(effect: typeof this.state.effect) {
-        this.setState({ effect });
-    }
-    refesh() {
-        //刷新内联框架
-        var iframe = this.iframeRef.current!;
-        window.open(iframe.src, iframe.name, "");
-    }
-    onActiveFileChange() {
-        if (this.state.effect.autoReload) this.refesh();
-    }
-
-    changeWatch() {
-        const effect = this.state.effect;
-        //切换监听状态并发送数据
-        this.setEffectConfi({ ...effect, watch: !effect.watch });
-
-        postMessage("watch", !effect.watch);
-    }
-    changeAutoReload() {
-        const effect = this.state.effect;
-        this.setEffectConfi({ ...effect, autoReload: !effect.autoReload });
-        postMessage("autoReload", !effect.autoReload);
-    }
-
-    vsUpdate(data: any) {
-        //更新数据函数, 将data对象上的数据遍历到组件实例
-        Object.assign(this, data);
-    }
-    vscodeMessage(e: any) {
-        //收到vscode消息的钩子
-        let data = e.data;
-        var exc: Function = (this as any)[data.command];
-        if (typeof exc === "function") exc(data.arg);
+        window.removeEventListener("message", this.removeListenerKey);
     }
     setting() {
         const state = this.state;
         this.setState({ showSetting: !state.showSetting });
     }
+    /** 更新并同步到vscode插件 */
+    syncBaseData<T extends keyof MS.baseData>(dataName: T, val: MS.baseData[T]) {
+        this.updateBaseData(dataName, val);
+        this.sendMessage("updateBaseData", dataName, val);
+    }
+    /** 仅更新 */
+    updateBaseData<T extends keyof MS.baseData>(dataName: T, val: MS.baseData[T]) {
+        const baseData = { ...this.state.baseData };
+        baseData[dataName] = val;
+        this.setState({ baseData });
+    }
+
+    /** 初始化baseData */
+    initBaseData(baseData: MS.baseData) {
+        this.setState({ baseData });
+    }
+    sendMessage<T extends MS.ext.commands>(command: T, ...context: MS.ext.context<T>): void {
+        vscode.postMessage({ command, context } as MS.ext.onMsData);
+    }
+    /** 刷新内联框架 */
+    reload() {
+        var iframe = this.iframeRef.current!;
+        window.open(iframe.src, iframe.name, "");
+    }
+    onActiveFileChange() {
+        if (this.state.baseData?.autoReload) this.reload();
+    }
+    onMessage(e: MS.webView.onMsData): void {
+        //收到vscode消息的钩子
+        const { command, context } = e.data;
+        typeof this[command] === "function" && (this[command] as Function)(...context);
+    }
 }
-function Setting(props: { instance: Head; onClose?: (...arg: any) => any }) {
-    const { instance } = props;
+function Setting(props: { baseData: MS.baseData; instance: Head; onClose?: (...arg: any) => any }) {
+    const { instance, baseData } = props;
     const { state } = instance;
-    const { effect, lang } = state;
+    const { lang } = state;
 
     const installDir = useMemo(
         function () {
-            var dp = effect.workspaceFolderDir + "/" + (effect.serverRootDir ? effect.serverRootDir : "") + "/.preview";
+            var dp =
+                baseData.workspaceFolderDir +
+                "/" +
+                (baseData.serverRootDir ? baseData.serverRootDir : "") +
+                "/.preview";
             return dp.replace(/[\\/]+/g, "/");
         },
-        [effect.workspaceFolderDir, effect.serverRootDir]
+        [baseData.workspaceFolderDir, baseData.serverRootDir]
     );
     const install = useCallback(function () {
-        postMessage("install");
+        postMessage("install", undefined);
     }, []);
     const updateRoot = useCallback(
         function (e: React.FocusEvent<HTMLInputElement>) {
             //根路径并发送数据
             const dom = e.target;
             var value = dom.value;
-            var rootDir = effect.serverRootDir;
+            var rootDir = baseData.serverRootDir;
             if (rootDir === value) return;
-            instance.setState({ serverRootDir: value });
-            postMessage("updateServerRootDir", value);
+            instance.syncBaseData("serverRootDir", value);
         },
-        [effect.serverRootDir]
+        [baseData.serverRootDir, instance]
     );
     const updateURL = useCallback(
         function (e: React.FocusEvent<HTMLInputElement>) {
             //更改URL并发送数据
             const dom = e.target;
             var value = dom.value;
-            var url = effect.serverURL;
+            var url = baseData.serverURL;
             if (url === value) return;
             if (!value.match(/^\w+:\/\/.+(:\d+)?$/)) dom.value = url;
-            else {
-                instance.setState({ serverURL: value });
-                postMessage("updateURL", value);
-            }
+            else instance.syncBaseData("serverURL", value);
         },
-        [effect.serverURL]
+        [baseData.serverURL, instance]
     );
     return (
         <div
@@ -236,7 +253,7 @@ function Setting(props: { instance: Head; onClose?: (...arg: any) => any }) {
             >
                 <div style={{ height: "calc(100% - 30px)" }}>
                     <div style={{ textAlign: "center", fontSize: "24px", marginBottom: "15px" }}>
-                        {effect.workspaceFolderName}
+                        {baseData.workspaceFolderName}
                     </div>
                     <span style={{ fontSize: "13px", fontWeight: "bold" }}>
                         Server root Directory: ( Relative to the workspace folder )
@@ -245,7 +262,7 @@ function Setting(props: { instance: Head; onClose?: (...arg: any) => any }) {
                         <input
                             style={{ width: "300px", margin: "5px 0" }}
                             type="text"
-                            defaultValue={effect.serverRootDir}
+                            defaultValue={baseData.serverRootDir}
                             onBlur={updateRoot}
                         />
                         <IB
@@ -264,7 +281,7 @@ function Setting(props: { instance: Head; onClose?: (...arg: any) => any }) {
                             ></UI.mouseOverUI>
                         </IB>
                     </div>
-                    {effect.workspaceFolderDir ? lang['依赖将被安装到 "'] + installDir + '"' : ""}
+                    {baseData.workspaceFolderDir ? lang['依赖将被安装到 "'] + installDir + '"' : ""}
                     <br />
                     <br />
                     <span style={{ fontSize: "13px", fontWeight: "bold" }}>Server URL: </span>
@@ -272,11 +289,11 @@ function Setting(props: { instance: Head; onClose?: (...arg: any) => any }) {
                     <input
                         style={{ width: "300px", margin: "5px 0" }}
                         type="text"
-                        defaultValue={effect.serverURL}
+                        defaultValue={baseData.serverURL}
                         onBlur={updateURL}
                     />
                     <br />
-                    {lang['在浏览器输入 "'] + effect.serverURL + lang['" 将自动预览组件']}
+                    {lang['在浏览器输入 "'] + baseData.serverURL + lang['" 将自动预览组件']}
                 </div>
                 <UI.mouseOverUI
                     onClick={props.onClose}
