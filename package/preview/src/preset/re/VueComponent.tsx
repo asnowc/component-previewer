@@ -15,7 +15,6 @@ export class Component<PropsType = {}> implements JSX.ElementClass {
         }
         this.setState = this.setState.bind(this);
     }
-    $props: any; //vue中的声明
     context: unknown;
     refs: { [key: string]: any } = {};
     forceUpdate() {}
@@ -29,7 +28,7 @@ export class Component<PropsType = {}> implements JSX.ElementClass {
         return;
     }
 }
-type ClassCPN = new (props: Object) => Component;
+type ClassCPN = new (props: any) => Component;
 type FxCPN = (...arg: any) => ReactNode;
 type CPN = string | ClassCPN | FxCPN;
 type Children = ReactNode[];
@@ -90,7 +89,14 @@ export const createElement = (function () {
             }
         } else return cpn;
     }
-    function Vue3createElement(cpn: CPN, props?: null | undefined | Props, ...children: Children): ReactNode {
+    type CreateProps<T extends CPN> = T extends keyof JSX.IntrinsicElements
+        ? JSX.IntrinsicElements[T]
+        : T extends string
+        ? {}
+        : T extends ClassCPN
+        ? ConstructorParameters<T>[0]
+        : Parameters<FxCPN>[0];
+    function Vue3createElement<T extends CPN>(cpn: T, props: CreateProps<T>, ...children: Children): ReactNode {
         if (typeof cpn === "string" && props) {
             // 将React的onMouseOut写法改成vue的onMouseout
             for (const key of Object.keys(props)) {
@@ -125,9 +131,9 @@ export const createElement = (function () {
         });
     }
 
-    function Vue2CreateElement(
-        cpn: CPN,
-        props?: null | undefined | obj,
+    function Vue2CreateElement<T extends CPN>(
+        cpn: T,
+        props: CreateProps<T>,
         ...children: [any, (Children | customVnode)[]]
     ): ReactNode {
         var transProps: obj = {};

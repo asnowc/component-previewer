@@ -1,17 +1,50 @@
-var cache: undefined | ReturnType<typeof cate>;
-export default function (h: (...arg: any) => Object, parent: parentComponent) {
-    if (cache) return cache;
-    else return cate(h, parent);
+export function prepare(
+    mod: Object | undefined,
+    url: string,
+    ...args: Parameters<typeof cate>
+): [HTMLElement, JSX.Element] {
+    const comm = cate(...args);
+
+    if (!mod) mod = { default: { default: comm.ErrorTemplate("无法加载activeModule") } };
+
+    const App = args[0].createElement(comm.HOME as any, { mod, url });
+    const root = document.createElement("div");
+    document.body.appendChild(root);
+    root.style.height = "100%";
+    return [root, App];
 }
 type obj = {
     [key: number | string | symbol]: any;
 };
 
-type parentComponent = typeof global.React.Component;
+type ParentComponent = typeof global.React.Component;
 /** 设置JSX Factory, 返回公共组件
  *  @param parent React是React.Component, Vue是模拟的Component类
  */
-function cate(h: (...arg: any) => any, parent: parentComponent) {
+function cate<T extends { createElement: (...arg: any) => JSX.Element; Component: ParentComponent }>(
+    React: T,
+    isComponent: (cp: any) => boolean
+) {
+    const { Component, createElement: h } = React;
+    /** 筛选组件 */
+    function getVDOMList(unk_mod: Object, url = "unknown") {
+        var mod: any = unk_mod;
+        type modItem = { name: string; CPN?: any };
+        type myArray = { url: string } & Array<modItem>;
+        var Components: myArray = [] as any;
+        Components.url = url;
+        var keys = Object.keys(mod);
+
+        for (const name of keys) {
+            let val = mod[name];
+            let obj: modItem = { name };
+            if (isComponent(val)) obj.CPN = val;
+
+            if (name === "default") Components.unshift(obj);
+            else Components.push(obj);
+        }
+        return Components;
+    }
     var ret = {
         NullTemplate(arg?: string) {
             return function NullInfo() {
@@ -30,7 +63,7 @@ function cate(h: (...arg: any) => any, parent: parentComponent) {
                 return h("div", { style: { width: "100%", whiteSpace: "pre" } }, ...childs) as any;
             };
         },
-        Selector: class Selector extends parent<{
+        Selector: class Selector extends Component<{
             names: string[];
             index: number;
             onSelect?: (id: number) => any;
@@ -98,14 +131,19 @@ function cate(h: (...arg: any) => any, parent: parentComponent) {
                 );
             }
         },
-        HOME: class HOME extends parent<{
-            mod: obj;
-            url: string;
-            isCommponent: (cp: any) => boolean;
-        }> {
-            constructor(props: { mod: obj; url: string; isCommponent: (cp: any) => boolean }) {
+        HOME: class HOME extends Component<
+            {
+                mod: obj;
+                url: string;
+            },
+            {
+                showIndex: number;
+                CPN_List: ReturnType<typeof getVDOMList>;
+            }
+        > {
+            constructor(props: { mod: obj; url: string }) {
                 super(props);
-                var CPN_List = getVDOMList(props.mod, props.isCommponent, props.url);
+                var CPN_List = getVDOMList(props.mod, props.url);
                 if (CPN_List.length === 0) {
                     CPN_List[0] = { name: "null", CPN: ret.NullTemplate(CPN_List.url) };
                 } else
@@ -123,10 +161,6 @@ function cate(h: (...arg: any) => any, parent: parentComponent) {
                 CPN_List[showIndex].CPN = ret.ErrorTemplate("Render time error: " + this.props.url, e);
                 this.setState({ CPN_List });
             }
-            state: Readonly<{
-                showIndex: number;
-                CPN_List: ReturnType<typeof getVDOMList>;
-            }>;
 
             change(index: number) {
                 this.setState({ showIndex: index });
@@ -151,43 +185,4 @@ function cate(h: (...arg: any) => any, parent: parentComponent) {
         },
     };
     return ret;
-}
-/** 筛选组件 */
-function getVDOMList(unk_mod: Object, isCommponent: (cp: any) => boolean, url = "unknown") {
-    var mod: any = unk_mod;
-    type modItem = { name: string; CPN?: any };
-    type myArray = { url: string } & Array<modItem>;
-    var Components: myArray = [] as any;
-    Components.url = url;
-    var keys = Object.keys(mod);
-
-    for (const name of keys) {
-        let val = mod[name];
-        let obj: modItem = { name };
-        if (isCommponent(val)) obj.CPN = val;
-
-        if (name === "default") Components.unshift(obj);
-        else Components.push(obj);
-    }
-    return Components;
-}
-
-/**
- * Vite 项目自定义显示文件
- * 你可以根据你的需求进行修改, 显示你的页面
- * @description 判断activeFile, 判断是否是.test.**结尾，如果是，直接返回 否则返回 .test.**的文件
- * @return {string} 返回要预览的文件相对URL
- */
-export async function getActiveFileMap() {
-    var bridgeFile = await import("../../bridge/bridgeFile");
-    var data = bridgeFile.default; //这里是导出的活动文件的信息
-    var activeFile = data.activeFile.toLocaleLowerCase(); //活动文件相对路径
-    var exits = "";
-    {
-        let x = activeFile.lastIndexOf(".");
-        if (x >= 0) exits = activeFile.slice(x);
-    }
-    //这里做了映射，你可以根据需求自己调整
-    if (activeFile.search(/\.test\.[^\.]+$/) === -1) activeFile = activeFile.replace(/\.[^\.]+$/, ".test" + exits);
-    return "/" + activeFile;
 }

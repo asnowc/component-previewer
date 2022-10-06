@@ -27,7 +27,7 @@
     "activationEvents": [
         "workspaceContains:"
     ],
-    "main": "./out/extension.js",
+    "main": "./out/src/extension.js",
     "targets": {
         "main": false
     },
@@ -46,26 +46,48 @@
                 "ComponentPreviewer.serverURL": {
                     "description": "%setting.serverURL.desc%",
                     "type": "string",
-                    "default": "http://localhost:5173/.preview/index.html",
+                    "default": "http://localhost:5173/node_modules/.c_preview/index.html",
                     "scope": "resource"
                 },
-                "ComponentPreviewer.serverRootDir": {
-                    "description": "%setting.serverRootDir.desc%",
+                "ComponentPreviewer.previewFolderRelPath": {
+                    "description": "%setting.previewFolderRelPath.desc%",
                     "type": "string",
                     "scope": "resource",
-                    "default": ""
+                    "default": "node_modules"
+                },
+                "ComponentPreviewer.filePathMapReplace": {
+                    "markdownDescription": "%setting.filePathMapReplace.desc%",
+                    "type": "object",
+                    "scope": "resource",
+                    "default": {
+                        "\\.(?=\\w+$)": [
+                            "<0>test.",
+                            "<0>spec."
+                        ]
+                    }
+                },
+                "ComponentPreviewer.watchFilePathRegExp": {
+                    "description": "%setting.watchFilePathRegExp.desc%",
+                    "type": "object",
+                    "scope": "resource",
+                    "default": {
+                        "react": "\\.[tj]sx$",
+                        "vue": "\\.vue$",
+                        "html": "\\.html$",
+                        "other": "\\.[tj]s$"
+                    }
                 }
             }
         }
     },
     "scripts": {
-        "build": "buildExt & buildPreview & buildWebView",
+        "build": "pnpm buildExt & pnpm buildPreview & pnpm buildWebView",
         "watchExt": "tsc -watch",
         "buildExt": "tsc",
-        "watchPreview": "tsc --watch -p ./package/preview/tsconfig.json",
+        "watchPreview": "tsc -p ./package/preview/tsconfig.json --watch ",
         "buildPreview": "tsc -p ./package/preview/tsconfig.json",
-        "watchWebView": "vite build -c ./package/webview/vite.config.ts --watch",
-        "buildWebView": "vite build -c ./package/webview/vite.config.ts"
+        "watchWebView": "vite build -c ./package/webview/vite.config.ts --watch --minify false",
+        "buildWebView": "vite build -c ./package/webview/vite.config.ts --sourcemap false"
     },
     "devDependencies": {
         "@types/fs-extra": "^9.0.13",

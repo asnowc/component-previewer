@@ -8,7 +8,8 @@
         "lib": ["ESNext", "dom"],
         "rootDir": "src",
         "strict": true,
-        "skipLibCheck": true
+        // "skipLibCheck": true
+        "sourceMap": true
     },
     "exclude": ["**/node_modules/**", "package"],
     "include": ["src"]

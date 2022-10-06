@@ -12,12 +12,11 @@ export default defineConfig({
     build: {
         outDir: path.resolve(pjDir, "../../out/res/webview"),
         lib: {
-            entry: path.resolve(pjDir, "src/page.tsx"),
+            entry: path.resolve(pjDir, "src/main.ts"),
             formats: ["es"],
             name: "mylib",
             fileName: (format) => `index.js`,
         },
-        sourcemap: false,
-        minify: false,
+        sourcemap: "inline",
     },
 });

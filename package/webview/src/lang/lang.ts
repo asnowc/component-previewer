@@ -12,11 +12,13 @@ const langMap = {
         '在浏览器输入 "': 'Enter "',
         '" 将自动预览组件': '" in the browser to automatically preview the components',
         关闭: "Close",
+        预览文件夹目录: "Preview folder directory",
+        "（相对于工作区文件夹）":" (Relative to the workspace folder) "
     },
-    zh: {} as any,
+    "zh-cn": {} as any,
 };
 export type langTypeList = keyof typeof langMap;
-langMap["zh"] = createZhObj(langMap.en);
+langMap["zh-cn"] = createZhObj(langMap.en);
 
 function createZhObj(obj: LangMap): LangMap {
     const appendObj: any = {};
@@ -26,11 +28,7 @@ function createZhObj(obj: LangMap): LangMap {
     return appendObj;
 }
 
-function getter(str: (keyof LangMap)[], ...args: any[]): string {
-    return "";
-}
-
 export type LangMap = typeof langMap.en;
-export function getLang(lang: langTypeList): LangMap {
-    return langMap[lang] as LangMap;
+export function getLang(lang: langTypeList | string): LangMap {
+    return (langMap as any)[lang] as LangMap;
 }

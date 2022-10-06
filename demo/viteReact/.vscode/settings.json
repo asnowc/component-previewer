@@ -1,4 +1,10 @@
 {
-    "ComponentPreviewer.serverRootDir": "",
-    "ComponentPreviewer.serverURL": "http://localhost:5173/.preview/index.html"
+    "ComponentPreviewer.filePathMapReplaceRegExp": [
+        "\\.(?=\\w+$)",
+        "\\.(?=\\w+$)",
+    ],
+    "ComponentPreviewer.filePathMapReplaceString": [
+        "<0>test.",
+        "<0>spec."
+    ]
 }
