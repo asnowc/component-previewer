@@ -1,8 +1,9 @@
 out
 dist
 node_modules
-node_modules2
 .vscode-test/
 .cache
 .c_preview
 demo/*/.vscode
+
+/*.code-workspace

@@ -1,6 +1,5 @@
 import * as VS from "vscode";
 import { extContext } from "../extension";
-import type { BridgeData } from "../../package/preview/src/bridge/bridgeFile";
 import * as path from "node:path/posix";
 
 const fsv = VS.workspace.fs;
@@ -103,32 +102,29 @@ await preview();
             throw error;
         }
     }
-    private witeFile(dir: VS.Uri, jsData: Uint8Array, cjsData: Uint8Array) {
-        const cjsUri = VS.Uri.joinPath(dir, "bridgeFile.cjs");
-        const jsUri = VS.Uri.joinPath(dir, "bridgeFile.js");
-        // await Promise.all([fse.ensureFile(jsUri), fse.ensureFile(cjsUri)]);
-        return Promise.all([fsv.writeFile(jsUri, jsData), fsv.writeFile(cjsUri, cjsData)]);
-    }
     updateBridgeFile(bridgeData: BridgeData) {
         let bridgeFolderRelPath = path.join(bridgeData.previewFolderRelPath, "bridge");
         let relModPath = path.relative(bridgeFolderRelPath, bridgeData.mapFileRelPath);
 
-        const bridgeDataText = `${JSON.stringify(bridgeData, null, 4)};`;
-        const previewFxText = `async function preview() {
-    try {
-        var [mod, preset] = await Promise.all([import("${relModPath}"), import("../preset/${bridgeData.presetName}")]);
-    } catch (error) {
-        console.error("活动模块导入失败:");
-        console.error(error);
-    }
-    preset.render(mod, bridgeData);
-}`;
-        const jsData = `export const bridgeData = ${bridgeDataText}
-export ${previewFxText}`;
-        const cjsData = `exports.bridgeData = ${bridgeDataText}
-exports.preview = ${previewFxText}`;
-        return this.witeFile(VS.Uri.joinPath(this.folderUri, "bridge"), Buffer.from(jsData), Buffer.from(cjsData));
+        const data = `import { render } from "../preset/${bridgeData.presetName}";
+export const bridgeData = ${JSON.stringify(bridgeData, null, 4)};
+export const preview = () => render(getMod, bridgeData);
+const getMod = () => import("${relModPath}");`;
+        return fsv.writeFile(VS.Uri.joinPath(this.folderUri, "bridge/bridgeFile.js"), Buffer.from(data));
     }
 }
 
-export type { BridgeData } from "../../package/preview/src/bridge/bridgeFile";
+export type BridgeData = {
+    /** 工作区根目录(绝对) */
+    workspaceFolder: string;
+    /** 工作区文件夹名字 */
+    workspaceFolderName: string;
+    /** 预览文件夹根目录, 相对于 workspaceFolder */
+    previewFolderRelPath: string;
+    /** 活动文件相对路径(相对于 workspaceFolder) */
+    activeFileRelPath: string;
+    /** 映射文件相对路径(相对于 workspaceFolder) */
+    mapFileRelPath: string;
+    /** 预设名称 */
+    presetName: string;
+};

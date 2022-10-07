@@ -1,3 +1,4 @@
+import { render } from "../preset/other";
 export const bridgeData = {
     /** 工作区根目录(绝对) */
     workspaceFolder: "D:/xxx",
@@ -13,12 +14,5 @@ export const bridgeData = {
     presetName: "other",
 };
 export type BridgeData = typeof bridgeData;
-export async function preview() {
-    try {
-        var [mod, preset] = await Promise.all([import("../preset/defaultPage"), import("../preset/other")]);
-    } catch (error) {
-        console.error("活动模块导入失败:");
-        console.error(error);
-    }
-    preset.render(mod, bridgeData);
-}
+export const preview = () => render(getMod, bridgeData);
+const getMod = () => import("../preset/defaultPage"); //如果使用webpack, 则必须使用完整字符串导入

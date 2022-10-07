@@ -17,7 +17,7 @@
         "Webpack",
         "component"
     ],
-    "version": "0.0.1",
+    "version": "1.0.0",
     "engines": {
         "vscode": "^1.63.0"
     },
@@ -81,7 +81,9 @@
         }
     },
     "scripts": {
-        "build": "pnpm buildExt & pnpm buildPreview & pnpm buildWebView",
+        "buildAll": "pnpm buildExt & pnpm buildPreview & pnpm buildWebView",
+        "package": "vsce package -o ./dist/componentPreviewer.vsix",
+        "publish": "vsce publish -i ./dist/componentPreviewer.vsix",
         "watchExt": "tsc -watch",
         "buildExt": "tsc",
         "watchPreview": "tsc -p ./package/preview/tsconfig.json --watch ",
@@ -90,11 +92,7 @@
         "buildWebView": "vite build -c ./package/webview/vite.config.ts --sourcemap false"
     },
     "devDependencies": {
-        "@types/fs-extra": "^9.0.13",
         "@types/node": "16",
         "@types/vscode": "^1.63.0"
-    },
-    "dependencies": {
-        "fs-extra": "^10.1.0"
     }
 }

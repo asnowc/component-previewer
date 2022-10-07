@@ -8,15 +8,16 @@ import env from "./env";
 import { Bridge, BridgeData } from "./classes/Bridge";
 import { Mapper } from "./classes/Mapper";
 
-const dev = {
-    errorMessage(msg: string) {
-        if (env.mode === "dev") VS.window.showErrorMessage("Component Previewer: " + msg);
+const message = {
+    getHead: "Component Previewer: ",
+    error(msg: string) {
+        VS.window.showErrorMessage(this.getHead + msg);
     },
-    waringMessage(msg: string) {
-        if (env.mode === "dev") VS.window.showWarningMessage("Component Previewer: " + msg);
+    warn(msg: string) {
+        VS.window.showWarningMessage(this.getHead + msg);
     },
-    infoMessage(msg: string) {
-        if (env.mode === "dev") VS.window.showInformationMessage("Component Previewer: " + msg);
+    info(msg: string) {
+        VS.window.showInformationMessage(this.getHead + msg);
     },
 };
 class StatusBar {
@@ -53,7 +54,30 @@ class StatusBar {
 }
 
 export class Dispatcher {
-    private static activeFolder?: VS.WorkspaceFolder;
+    private static defaultBar = new StatusBar("C Prev", "Opening the Previewer", this.handelClick.bind(this));
+
+    private static readonly previewers = new Map<VS.WorkspaceFolder, Previewer>();
+    private static activeFolder? = this.getActiveFolder();
+    private static onChangeActiveTextEditor(activeTextEditor?: VS.TextEditor) {
+        if (!activeTextEditor) {
+            this.activeFolder = undefined;
+            StatusBar.switch(this.defaultBar);
+            return;
+        }
+        const activeFolder = this.getActiveFolder(activeTextEditor);
+        if (activeFolder !== this.activeFolder) {
+            this.activeFolder = activeFolder;
+
+            if (activeFolder) {
+                const bar = this.activePreviewer?.statusBar;
+                bar && StatusBar.switch(bar);
+            } else StatusBar.switch(this.defaultBar);
+        }
+        this.activePreviewer?.onChangeActiveFile(activeTextEditor.document.uri);
+    }
+    static get activePreviewer() {
+        return this.activeFolder && this.previewers.get(this.activeFolder);
+    }
     static main(): void {
         for (const folder of VS.workspace.workspaceFolders ?? []) {
             this.previewers.set(folder, new Previewer(folder));
@@ -75,36 +99,16 @@ export class Dispatcher {
             },
             this
         );
-        VS.window.onDidChangeActiveTextEditor(
-            (activeTextEditor) => {
-                if (!activeTextEditor) {
-                    this.activeFolder = undefined;
-                    return;
-                }
-                const activeFolder = this.getActiveFolder(activeTextEditor);
-                if (activeFolder !== this.activeFolder) {
-                    this.activeFolder = activeFolder;
-
-                    if (activeFolder) {
-                        const bar = this.activePreviewer?.statusBar;
-                        bar && StatusBar.switch(bar);
-                    } else StatusBar.switch(this.defaultBar);
-                }
-                this.activePreviewer?.onChangeActiveFile(activeTextEditor);
-            },
-            undefined,
-            extContext.subscriptions
-        );
+        VS.window.onDidChangeActiveTextEditor(this.onChangeActiveTextEditor, this, extContext.subscriptions);
         VS.workspace.onDidChangeWorkspaceFolders(
-            (e) => {
+            function (e) {
                 for (const folder of e.added) {
-                    this.previewers.set(folder, new Previewer(folder));
+                    Dispatcher.previewers.set(folder, new Previewer(folder));
                 }
                 for (const folder of e.removed) {
-                    const cpv = this.previewers.get(folder);
-                    this.previewers.delete(folder);
+                    const cpv = Dispatcher.previewers.get(folder);
+                    Dispatcher.previewers.delete(folder);
                     cpv?.destructor();
-                    cpv?.close();
                 }
             },
             undefined,
@@ -115,6 +119,7 @@ export class Dispatcher {
             undefined,
             extContext.subscriptions
         );
+        this.onChangeActiveTextEditor(VS.window.activeTextEditor);
     }
     /**
      *  @description 获取编辑器对应的的工作区文件夹. 如果没有则为undefined
@@ -134,12 +139,6 @@ export class Dispatcher {
 
         return undefined;
     }
-    private static defaultBar = new StatusBar("C Prev", "Opening the Previewer", this.handelClick.bind(this));
-
-    private static readonly previewers = new Map<VS.WorkspaceFolder, Previewer>();
-    static get activePreviewer() {
-        return this.activeFolder && this.previewers.get(this.activeFolder);
-    }
     private static async handelClick() {
         //不存在活动工作区文件夹
         const folders = VS.workspace.workspaceFolders ?? [];
@@ -157,8 +156,10 @@ class Previewer {
     readonly extensionConfig;
 
     private baseData: MS.baseData;
-
     private subscriptions: VS.Disposable[] = [];
+    private activeFileUrl?: VS.Uri;
+    watchFilePathRegExp!: { [key: string]: RegExp }; //用来判断预设
+
     constructor(private readonly folder: VS.WorkspaceFolder) {
         this.statusBar = new StatusBar("C Prev", "watch: false", this.onStatusBarClick.bind(this));
         this.extensionConfig = new CpvConfiguration(folder);
@@ -166,7 +167,7 @@ class Previewer {
         const baseData = {
             watch: false,
             workspaceFolderName: this.folder.name,
-            workspaceFolderDir: this.folder.uri.fsPath,
+            workspaceFolderDir: this.folder.uri.toString(),
             autoReload: false,
             ...this.extensionConfig.get(),
         };
@@ -230,11 +231,14 @@ class Previewer {
         data.watch = value;
         if (value) {
             this.bridge.install();
-            this.onActiveFileSave();
+            // this.onActiveFileSave();
+            let activeFileUri = this.activeFileUrl;
+            if (activeFileUri) {
+                this.activeFileUrl = undefined;
+                this.onChangeActiveFile(activeFileUri);
+            }
         }
     }
-
-    watchFilePathRegExp!: { [key: string]: RegExp }; //用来判断预设
 
     /** 判断文件应该使用的预设 */
     private estimatePreset(relativePath: string) {
@@ -265,9 +269,7 @@ class Previewer {
         const bridgeData: BridgeData = { ...data, workspaceFolderName: baseData.workspaceFolderName, presetName };
         this.view?.dev(bridgeData);
 
-        this.bridge.updateBridgeFile(bridgeData).catch(function (e) {
-            console.log(e);
-        });
+        this.bridge.updateBridgeFile(bridgeData);
     }
 
     private onDidChangeConfiguration() {
@@ -291,17 +293,24 @@ class Previewer {
 
         this.view?.setBaseData(this.baseData);
     }
-    onChangeActiveFile(textEditor: VS.TextEditor) {
+    onChangeActiveFile(fileUri: VS.Uri) {
+        if (this.activeFileUrl?.toString() === fileUri.toString()) return;
+        this.activeFileUrl = fileUri;
         const rootDir = this.baseData.workspaceFolderDir;
-        const relativePath = path.relative(rootDir, textEditor.document.uri.fsPath);
+        const relativePath = path.relative(rootDir, fileUri.toString());
         if (!this.baseData.watch) return this.view?.dev({ relativePath, fin: "no watch" });
         const presetName = this.estimatePreset(relativePath);
 
         return presetName
-            ? this.mapper.getMapUri(this.folder.uri, relativePath).then(
-                  (mapRelPath) => this.updateBridge(relativePath, mapRelPath, presetName),
-                  (e) => this.updateBridge(relativePath, relativePath, presetName)
-              )
+            ? this.mapper
+                  .getMapUri(this.folder.uri, relativePath)
+                  .then(
+                      (mapRelPath) => this.updateBridge(relativePath, mapRelPath, presetName),
+                      (e) => this.updateBridge(relativePath, relativePath, presetName)
+                  )
+                  .catch((e) => {
+                      message.error(e.message);
+                  })
             : undefined;
     }
     onActiveFileSave() {
@@ -377,7 +386,7 @@ class View extends EventEmitter {
     on: <T extends keyof ViewEvents>(eventName: T, listener: ViewEvents[T]) => this = super.on;
     private onMessage(data: MS.ext.onMsData): void {
         if (typeof data?.command !== "string") {
-            dev.errorMessage("Error message:" + data);
+            message.error("Error message:" + data);
             return;
         }
         const { context, command } = data;

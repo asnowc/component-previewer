@@ -4,14 +4,9 @@ importers:
 
   .:
     specifiers:
-      '@types/fs-extra': ^9.0.13
       '@types/node': '16'
       '@types/vscode': ^1.63.0
-      fs-extra: ^10.1.0
-    dependencies:
-      fs-extra: registry.npmmirror.com/fs-extra/10.1.0
     devDependencies:
-      '@types/fs-extra': registry.npmmirror.com/@types/fs-extra/9.0.13
       '@types/node': registry.npmmirror.com/@types/node/16.11.48
       '@types/vscode': registry.npmmirror.com/@types/vscode/1.70.0
 
@@ -70,14 +65,6 @@ packages:
     requiresBuild: true
     dev: true
     optional: true
-
-  registry.npmmirror.com/@types/fs-extra/9.0.13:
-    resolution: {integrity: sha512-nEnwB++1u5lVDM2UI4c1+5R+FYaKfaAzS4OococimjVm3nQw3TuzH5UNsocrcTBbhnerblyHj4A49qXbIiZdpA==, registry: https://registry.npm.taobao.org/, tarball: https://registry.npmmirror.com/@types/fs-extra/-/fs-extra-9.0.13.tgz}
-    name: '@types/fs-extra'
-    version: 9.0.13
-    dependencies:
-      '@types/node': registry.npmmirror.com/@types/node/16.11.48
-    dev: true
 
   registry.npmmirror.com/@types/node/16.11.48:
     resolution: {integrity: sha512-Z9r9UWlNeNkYnxybm+1fc0jxUNjZqRekTAr1pG0qdXe9apT9yCiqk1c4VvKQJsFpnchU4+fLl25MabSLA2wxIw==, registry: https://registry.npm.taobao.org/, tarball: https://registry.npmmirror.com/@types/node/-/node-16.11.48.tgz}
@@ -373,17 +360,6 @@ packages:
       esbuild-windows-arm64: registry.npmmirror.com/esbuild-windows-arm64/0.14.54
     dev: true
 
-  registry.npmmirror.com/fs-extra/10.1.0:
-    resolution: {integrity: sha512-oRXApq54ETRj4eMiFzGnHWGy+zo5raudjuxN0b8H7s/RU2oW0Wvsx9O0ACRN/kRq9E8Vu/ReskGB5o3ji+FzHQ==, registry: https://registry.npm.taobao.org/, tarball: https://registry.npmmirror.com/fs-extra/-/fs-extra-10.1.0.tgz}
-    name: fs-extra
-    version: 10.1.0
-    engines: {node: '>=12'}
-    dependencies:
-      graceful-fs: registry.npmmirror.com/graceful-fs/4.2.10
-      jsonfile: registry.npmmirror.com/jsonfile/6.1.0
-      universalify: registry.npmmirror.com/universalify/2.0.0
-    dev: false
-
   registry.npmmirror.com/fsevents/2.3.2:
     resolution: {integrity: sha512-xiqMQR4xAeHTuB9uWm+fFRcIOgKBMiOBP+eXiyT7jsgVCq1bkVygt00oASowB7EdtpOHaaPgKt812P9ab+DDKA==, registry: https://registry.npm.taobao.org/, tarball: https://registry.npmmirror.com/fsevents/-/fsevents-2.3.2.tgz}
     name: fsevents
@@ -399,12 +375,6 @@ packages:
     name: function-bind
     version: 1.1.1
     dev: true
-
-  registry.npmmirror.com/graceful-fs/4.2.10:
-    resolution: {integrity: sha512-9ByhssR2fPVsNZj478qUUbKfmL0+t5BDVyjShtyZZLiK7ZDAArFFfopyOTj0M05wE2tJPisA4iTnnXl2YoPvOA==, registry: https://registry.npm.taobao.org/, tarball: https://registry.npmmirror.com/graceful-fs/-/graceful-fs-4.2.10.tgz}
-    name: graceful-fs
-    version: 4.2.10
-    dev: false
 
   registry.npmmirror.com/has/1.0.3:
     resolution: {integrity: sha512-f2dvO0VU6Oej7RkWJGrehjbzMAjFp5/VKPp5tTpWIV4JHHZK1/BxbFRtf/siA2SWTe09caDmVtYYzWEIbBS4zw==, registry: https://registry.npm.taobao.org/, tarball: https://registry.npmmirror.com/has/-/has-1.0.3.tgz}
@@ -427,16 +397,6 @@ packages:
     resolution: {integrity: sha512-RdJUflcE3cUzKiMqQgsCu06FPu9UdIJO0beYbPhHN4k6apgJtifcoCtT9bcxOpYBtpD2kCM6Sbzg4CausW/PKQ==, registry: https://registry.npm.taobao.org/, tarball: https://registry.npmmirror.com/js-tokens/-/js-tokens-4.0.0.tgz}
     name: js-tokens
     version: 4.0.0
-    dev: false
-
-  registry.npmmirror.com/jsonfile/6.1.0:
-    resolution: {integrity: sha512-5dgndWOriYSm5cnYaJNhalLNDKOqFwyDB/rr1E9ZsGciGvKPs8R2xYGCacuf3z6K1YKDz182fd+fY3cn3pMqXQ==, registry: https://registry.npm.taobao.org/, tarball: https://registry.npmmirror.com/jsonfile/-/jsonfile-6.1.0.tgz}
-    name: jsonfile
-    version: 6.1.0
-    dependencies:
-      universalify: registry.npmmirror.com/universalify/2.0.0
-    optionalDependencies:
-      graceful-fs: registry.npmmirror.com/graceful-fs/4.2.10
     dev: false
 
   registry.npmmirror.com/loose-envify/1.4.0:
@@ -543,13 +503,6 @@ packages:
     version: 1.0.0
     engines: {node: '>= 0.4'}
     dev: true
-
-  registry.npmmirror.com/universalify/2.0.0:
-    resolution: {integrity: sha512-hAZsKq7Yy11Zu1DE0OzWjw7nnLZmJZYTDZZyEFHZdUhV8FkH5MCfoU1XMaxXovpyW5nq5scPqq0ZDP9Zyl04oQ==, registry: https://registry.npm.taobao.org/, tarball: https://registry.npmmirror.com/universalify/-/universalify-2.0.0.tgz}
-    name: universalify
-    version: 2.0.0
-    engines: {node: '>= 10.0.0'}
-    dev: false
 
   registry.npmmirror.com/vite/3.0.9:
     resolution: {integrity: sha512-waYABTM+G6DBTCpYAxvevpG50UOlZuynR0ckTK5PawNVt7ebX6X7wNXHaGIO6wYYFXSM7/WcuFuO2QzhBB6aMw==, registry: https://registry.npm.taobao.org/, tarball: https://registry.npmmirror.com/vite/-/vite-3.0.9.tgz}
