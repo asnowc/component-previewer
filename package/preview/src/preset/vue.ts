@@ -1,5 +1,5 @@
-import * as React from "./re/VueComponent";
-import { prepare } from "./re/Comm";
+import * as React from "./comm/VueComponent";
+import { prepare } from "./comm/Comm";
 import type { BridgeData } from "../bridge/bridgeFile";
 
 /** 简单判断一个变量是否是组件 */

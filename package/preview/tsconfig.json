@@ -6,12 +6,12 @@
         "module": "ESNext",
         "target": "ESNext",
         "outDir": "../../out/res/preview",
-        "lib": ["ESNext","DOM"],
+        "lib": ["ESNext", "DOM"],
         "sourceMap": false,
         "rootDir": "src",
         "strict": true /* enable all strict type-checking options */,
-        "skipLibCheck": true,
+        "skipLibCheck": true
     },
-    "exclude": ["node_modules"],
+    "exclude": ["node_modules", "src/main.ts"],
     "include": ["src"]
 }

@@ -5,9 +5,46 @@ import * as path from "node:path/posix";
 
 const fsv = VS.workspace.fs;
 
-export type { BridgeData } from "../../package/preview/src/bridge/bridgeFile";
+abstract class PreviewFile {
+    constructor(protected name: string) {}
+    test(distUri: VS.Uri) {
+        return fsv.stat(VS.Uri.joinPath(distUri, this.name)).then(undefined, (e: VS.FileSystemError) => {
+            e.code === "FileNotFound" && this.install(distUri);
+        });
+    }
+    getDistUri(distFolderUri: VS.Uri) {
+        return VS.Uri.joinPath(distFolderUri, this.name);
+    }
+    abstract install(distUri: VS.Uri): Thenable<any>;
+}
+class SrcFile extends PreviewFile {
+    srcFolderUri;
+    constructor(srcFolderUri: VS.Uri, name: string) {
+        super(name);
+        this.srcFolderUri = this.getDistUri(srcFolderUri);
+    }
+
+    install(distFolderUri: VS.Uri) {
+        return fsv.copy(this.srcFolderUri, this.getDistUri(distFolderUri));
+    }
+}
+class DataFile extends PreviewFile {
+    data: Buffer;
+    constructor(data: string, name: string) {
+        super(name);
+        this.data = Buffer.from(data);
+    }
+    install(distFolderUri: VS.Uri): Thenable<any> {
+        return fsv.writeFile(this.getDistUri(distFolderUri), this.data);
+    }
+}
+
 export class Bridge {
-    private htmlData = Buffer.from(`<!DOCTYPE html>
+    private static extUri = VS.Uri.joinPath(extContext.extensionUri, "out/res/preview");
+    static files: PreviewFile[] = [
+        new SrcFile(this.extUri, "preset"),
+        new DataFile(
+            `<!DOCTYPE html>
 <html lang="en">
     <head>
         <meta charset="UTF-8" />
@@ -27,15 +64,21 @@ export class Bridge {
     <body></body>
     <script></script>
     <script src="./main.js" type="module"></script>
-</html>`);
-    private extUri = VS.Uri.joinPath(extContext.extensionUri, "out/res/preview");
-    private get rootUri() {
+</html>`,
+            "index.html"
+        ),
+        new DataFile(
+            `import { preview } from "./bridge/bridgeFile";
+await preview();
+
+//do some thing...`,
+            "main.js"
+        ),
+    ];
+    private get folderUri() {
         return VS.Uri.joinPath(this.rootDirUri, ".c_preview");
     }
     constructor(public rootDirUri: VS.Uri) {}
-    // destructor() {
-    //     return this.revoke();
-    // }
     async move(rootUri: VS.Uri) {
         if (this.rootDirUri.toString() === rootUri.toString()) return;
         await this.revoke();
@@ -44,13 +87,16 @@ export class Bridge {
         return this.install();
     }
     /** 重新安装preview文件夹 */
-    async install() {
-        await fsv.copy(this.extUri, this.rootUri, { overwrite: true });
-        await fsv.writeFile(VS.Uri.joinPath(this.rootUri, "index.html"), this.htmlData);
+    install() {
+        let thenable: Thenable<void>[] = [];
+        for (const file of Bridge.files) {
+            thenable.push(file.test(this.folderUri));
+        }
+        return Promise.all(thenable);
     }
     async revoke() {
         try {
-            return await fsv.delete(this.rootUri, { recursive: true });
+            return await fsv.delete(this.folderUri, { recursive: true });
         } catch (error) {
             let e = error as VS.FileSystemError;
             if (e.code === "FileNotFound") return;
@@ -81,6 +127,8 @@ export class Bridge {
 export ${previewFxText}`;
         const cjsData = `exports.bridgeData = ${bridgeDataText}
 exports.preview = ${previewFxText}`;
-        return this.witeFile(VS.Uri.joinPath(this.rootUri, "bridge"), Buffer.from(jsData), Buffer.from(cjsData));
+        return this.witeFile(VS.Uri.joinPath(this.folderUri, "bridge"), Buffer.from(jsData), Buffer.from(cjsData));
     }
 }
+
+export type { BridgeData } from "../../package/preview/src/bridge/bridgeFile";

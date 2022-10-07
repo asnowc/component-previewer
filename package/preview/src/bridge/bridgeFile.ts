@@ -15,7 +15,7 @@ export const bridgeData = {
 export type BridgeData = typeof bridgeData;
 export async function preview() {
     try {
-        var [mod, preset] = await Promise.all([import("./defaultPage"), import("../preset/other")]);
+        var [mod, preset] = await Promise.all([import("../preset/defaultPage"), import("../preset/other")]);
     } catch (error) {
         console.error("活动模块导入失败:");
         console.error(error);
