@@ -46,14 +46,14 @@
                 "ComponentPreviewer.serverURL": {
                     "description": "%setting.serverURL.desc%",
                     "type": "string",
-                    "default": "http://localhost:5173/node_modules/.c_preview/index.html",
+                    "default": "http://localhost:5173/.c_preview/index.html",
                     "scope": "resource"
                 },
                 "ComponentPreviewer.previewFolderRelPath": {
                     "description": "%setting.previewFolderRelPath.desc%",
                     "type": "string",
                     "scope": "resource",
-                    "default": "node_modules"
+                    "default": ""
                 },
                 "ComponentPreviewer.filePathMapReplace": {
                     "markdownDescription": "%setting.filePathMapReplace.desc%",

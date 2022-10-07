@@ -7,27 +7,55 @@ const fsv = VS.workspace.fs;
 
 export type { BridgeData } from "../../package/preview/src/bridge/bridgeFile";
 export class Bridge {
-    private rootUri?: VS.Uri;
-    get root() {
-        return this.rootUri?.toString();
-    }
+    private htmlData = Buffer.from(`<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Document</title>
+        <style>
+            html,
+            body {
+                margin: 0;
+                padding: 0;
+                background-color: #fff;
+                height: 100%;
+            }
+        </style>
+    </head>
+    <body></body>
+    <script></script>
+    <script src="./main.js" type="module"></script>
+</html>`);
     private extUri = VS.Uri.joinPath(extContext.extensionUri, "out/res/preview");
-    constructor() {}
-    async setRoot(rootUri: VS.Uri) {
-        rootUri = VS.Uri.joinPath(rootUri, ".c_preview");
-        if (rootUri.toString() !== this.rootUri?.toString()) {
-            if (this.rootUri) {
-                await fsv.copy(this.rootUri, rootUri, { overwrite: true });
-                await fsv.delete(this.rootUri, { recursive: true });
-            } else await fsv.copy(this.extUri, rootUri, { overwrite: true });
-
-            this.rootUri = rootUri;
-        }
+    private get rootUri() {
+        return VS.Uri.joinPath(this.rootDirUri, ".c_preview");
     }
-    kill() {
-        const promise = this.rootUri && fsv.delete(this.rootUri, { recursive: true });
-        this.rootUri = undefined;
-        return promise;
+    constructor(public rootDirUri: VS.Uri) {}
+    // destructor() {
+    //     return this.revoke();
+    // }
+    async move(rootUri: VS.Uri) {
+        if (this.rootDirUri.toString() === rootUri.toString()) return;
+        await this.revoke();
+
+        this.rootDirUri = rootUri;
+        return this.install();
+    }
+    /** 重新安装preview文件夹 */
+    async install() {
+        await fsv.copy(this.extUri, this.rootUri, { overwrite: true });
+        await fsv.writeFile(VS.Uri.joinPath(this.rootUri, "index.html"), this.htmlData);
+    }
+    async revoke() {
+        try {
+            return await fsv.delete(this.rootUri, { recursive: true });
+        } catch (error) {
+            let e = error as VS.FileSystemError;
+            if (e.code === "FileNotFound") return;
+            throw error;
+        }
     }
     private witeFile(dir: VS.Uri, jsData: Uint8Array, cjsData: Uint8Array) {
         const cjsUri = VS.Uri.joinPath(dir, "bridgeFile.cjs");
@@ -36,7 +64,6 @@ export class Bridge {
         return Promise.all([fsv.writeFile(jsUri, jsData), fsv.writeFile(cjsUri, cjsData)]);
     }
     updateBridgeFile(bridgeData: BridgeData) {
-        if (!this.rootUri) return;
         let bridgeFolderRelPath = path.join(bridgeData.previewFolderRelPath, "bridge");
         let relModPath = path.relative(bridgeFolderRelPath, bridgeData.mapFileRelPath);
 
