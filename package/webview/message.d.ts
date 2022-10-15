@@ -8,6 +8,7 @@ export type baseData = {
     previewFolderRelPath: string;
     watchFilePathRegExp: { [key: string]: string };
     filePathMapReplace: { [key: string]: string[] };
+    watchScope: string;
 };
 export type Env = {
     mode: string;

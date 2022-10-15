@@ -58,12 +58,11 @@ export class Mapper {
      * @param distRelPath 相对于rootDir, 测试访问时, 访问的是 rootDir 下的 distRelPath
      * @return 返回映射文件的相对路径, 相对于 rootDir
      */
-    async getMapUri(rootDir: VS.Uri, distRelPath: string) {
-        for (const fsRelPath of this.replace(distRelPath)) {
+    async getMapUri(srcUrl: string) {
+        for (const mapUrl of this.replace(srcUrl)) {
             try {
-                const mapUri = VS.Uri.joinPath(rootDir, fsRelPath);
-                await fsv.stat(mapUri);
-                return path.relative(rootDir.path, mapUri.path);
+                await fsv.stat(VS.Uri.parse(mapUrl));
+                return mapUrl;
             } catch (error) {}
         }
         throw undefined;

@@ -60,9 +60,9 @@
                     "type": "object",
                     "scope": "resource",
                     "default": {
-                        "\\.(?=\\w+$)": [
-                            "<0>test.",
-                            "<0>spec."
+                        "^(.+)(\\.\\w+)$": [
+                            "<1>.test<2>",
+                            "<1>.spec<2>"
                         ]
                     }
                 },
@@ -76,6 +76,11 @@
                         "html": "\\.html$",
                         "other": "\\.[tj]s$"
                     }
+                },
+                "ComponentPreviewer.watchScope": {
+                    "description": "%setting.watchScope%",
+                    "type": "string",
+                    "scope": "resource"
                 }
             }
         }

@@ -48,7 +48,7 @@ class StatusBar {
         //不存在活动工作区文件夹
         const folders = VS.workspace.workspaceFolders ?? [];
         let pickList: (VS.QuickPickItem & { exc: () => void; folder?: VS.WorkspaceFolder })[] = [];
-        function openPreviewer(this: typeof pickList[0]) {
+        function openPreviewer(this: { folder: VS.WorkspaceFolder }) {
             let folder = this.folder!;
             const previewer = Dispatcher.getPreviewer(folder);
             previewer?.open();
@@ -58,16 +58,21 @@ class StatusBar {
                 Dispatcher.getPreviewer(folder)?.switchWatch(false);
             }
         }
-
-        for (const folder of folders) {
-            let state = this.showList.get(folder.uri.toString());
-            let pickItem: typeof pickList[0] = { label: "Open: " + folder.name, exc: openPreviewer, folder };
-            if (state) pickItem.description = state[1];
-            pickList.push(pickItem);
+        if (folders.length === 0) message.warn("Open at least one workspace folder");
+        else if (folders.length === 1) {
+            openPreviewer.bind({ folder: folders[0] })();
+            return;
+        } else {
+            for (const folder of folders) {
+                let state = this.showList.get(folder.uri.toString());
+                let pickItem: typeof pickList[0] = { label: "Open: " + folder.name, exc: openPreviewer, folder };
+                if (state) pickItem.description = state[1];
+                pickList.push(pickItem);
+            }
+            pickList.push({ label: "Stop all watching", exc: closeAll });
+            let selected = await VS.window.showQuickPick(pickList, { title: "Select an action" });
+            selected?.exc();
         }
-        pickList.push({ label: "Stop all watching", exc: closeAll });
-        let selected = await VS.window.showQuickPick(pickList, { title: "Select an action" });
-        selected?.exc();
     }
 }
 
@@ -152,7 +157,7 @@ class Previewer {
         const baseData = {
             watch: false,
             workspaceFolderName: this.folder.name,
-            workspaceFolderDir: this.folder.uri.toString(),
+            workspaceFolderDir: decodeURI(this.folder.uri.toString()),
             autoReload: false,
             ...this.extensionConfig.get(),
         };
@@ -239,7 +244,7 @@ class Previewer {
         }
     }
 
-    private updateBridge(activeFileRelPath: string, mapFileRelPath: string, presetName: string) {
+    private updateBridge(presetName: string, activeFileRelPath: string, mapFileRelPath = activeFileRelPath) {
         const baseData = this.baseData;
         const data = {
             workspaceFolder: baseData.workspaceFolderDir,
@@ -285,22 +290,24 @@ class Previewer {
     onChangeActiveFile(fileUri: VS.Uri) {
         if (this.activeFileUrl?.toString() === fileUri.toString()) return;
         this.activeFileUrl = fileUri;
-        const rootDir = this.baseData.workspaceFolderDir;
-        const relativePath = path.relative(rootDir, fileUri.toString());
-        if (!this.baseData.watch) return this.view?.dev({ relativePath, fin: "no watch" });
-        const presetName = this.estimatePreset(relativePath);
 
-        return presetName
-            ? this.mapper
-                  .getMapUri(this.folder.uri, relativePath)
-                  .then(
-                      (mapRelPath) => this.updateBridge(relativePath, mapRelPath, presetName),
-                      (e) => this.updateBridge(relativePath, relativePath, presetName)
-                  )
-                  .catch((e) => {
-                      message.error(e.message);
-                  })
-            : undefined;
+        const fileUrl = fileUri.toString();
+        const baseData = this.baseData;
+        if (!baseData.watch) return this.view?.dev({ path: decodeURI(fileUrl), fin: "no watch" });
+
+        const rootUrl = this.folder.uri.toString();
+        let watchScope = path.join(rootUrl, baseData.watchScope);
+        if (path.relative(watchScope, fileUrl).startsWith(".."))
+            return this.view?.dev({ path: decodeURI(fileUrl), fin: "out of range" });
+
+        const presetName = this.estimatePreset(fileUrl);
+        const relativePath = path.relative(rootUrl, fileUrl);
+        if (presetName) {
+            this.mapper.getMapUri(fileUrl).then(
+                (mapUrl) => this.updateBridge(presetName, relativePath, path.relative(rootUrl, mapUrl)),
+                (e) => this.updateBridge(presetName, relativePath)
+            );
+        } else return this.view?.dev({ path: decodeURI(fileUrl), fin: "no match" });
     }
     onActiveFileSave() {
         this.baseData.autoReload && this.view?.reload();

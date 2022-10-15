@@ -58,6 +58,7 @@ export interface ConfigurationType {
     previewFolderRelPath: string;
     watchFilePathRegExp: { [key: string]: string };
     filePathMapReplace: { [key: string]: string[] };
+    watchScope: string;
 }
 export class CpvConfiguration extends Configuration<ConfigurationType> {
     readonly sectionHead = "ComponentPreviewer";
