@@ -21,59 +21,70 @@ const message = {
     },
 };
 class StatusBar {
-    #text: string;
-    get text() {
-        return this.#text;
+    private static init() {
+        const cmd = "ComponentPreviewer.openView";
+        extContext.subscriptions.push(VS.commands.registerCommand(cmd, this.handelClick, this));
+        const statusBar = VS.window.createStatusBarItem(VS.StatusBarAlignment.Right);
+        statusBar.command = cmd;
+        statusBar.text = "C Prev";
+        statusBar.tooltip = "";
+        statusBar.show();
+
+        return statusBar;
     }
-    set text(val) {
-        this.#text = val;
-        if (StatusBar.activeBar === this) StatusBar.statusBar.text = val;
+    private static statusBar = this.init();
+    private static showList = new Map<string, [string, string]>();
+    static setList(folder: VS.WorkspaceFolder, value?: string) {
+        if (value) this.showList.set(folder.uri.toString(), [folder.name, value]);
+        else this.showList.delete(folder.uri.toString());
+        this.updateBar();
     }
-    #tooltip?: string;
-    get tooltip() {
-        return this.#tooltip;
+    private static updateBar() {
+        let str = "";
+        for (const [, [name, value]] of this.showList) str += name + ": " + value + "\n";
+        this.statusBar.tooltip = str.length ? str : "no watching";
     }
-    set tooltip(val) {
-        this.#tooltip = val;
-        if (StatusBar.activeBar === this) StatusBar.statusBar.tooltip = val;
-    }
-    constructor(text: string, tooltip?: string, public onClick?: () => any) {
-        this.#text = text;
-        this.#tooltip = tooltip;
-    }
-    private static statusBar = VS.window.createStatusBarItem(VS.StatusBarAlignment.Right);
-    private static activeBar: StatusBar;
-    static switch(bar: StatusBar) {
-        this.statusBar.tooltip = bar.tooltip;
-        this.statusBar.text = bar.text;
-    }
-    static init(cmd: string) {
-        this.statusBar.command = cmd;
-        this.statusBar.show();
+    private static async handelClick() {
+        //不存在活动工作区文件夹
+        const folders = VS.workspace.workspaceFolders ?? [];
+        let pickList: (VS.QuickPickItem & { exc: () => void; folder?: VS.WorkspaceFolder })[] = [];
+        function openPreviewer(this: typeof pickList[0]) {
+            let folder = this.folder!;
+            const previewer = Dispatcher.getPreviewer(folder);
+            previewer?.open();
+        }
+        function closeAll(this: typeof pickList[0]) {
+            for (const folder of folders) {
+                Dispatcher.getPreviewer(folder)?.switchWatch(false);
+            }
+        }
+
+        for (const folder of folders) {
+            let state = this.showList.get(folder.uri.toString());
+            let pickItem: typeof pickList[0] = { label: "Open: " + folder.name, exc: openPreviewer, folder };
+            if (state) pickItem.description = state[1];
+            pickList.push(pickItem);
+        }
+        pickList.push({ label: "Stop all watching", exc: closeAll });
+        let selected = await VS.window.showQuickPick(pickList, { title: "Select an action" });
+        selected?.exc();
     }
 }
 
 export class Dispatcher {
-    private static defaultBar = new StatusBar("C Prev", "Opening the Previewer", this.handelClick.bind(this));
-
     private static readonly previewers = new Map<VS.WorkspaceFolder, Previewer>();
     private static activeFolder? = this.getActiveFolder();
     private static onChangeActiveTextEditor(activeTextEditor?: VS.TextEditor) {
         if (!activeTextEditor) {
             this.activeFolder = undefined;
-            StatusBar.switch(this.defaultBar);
             return;
         }
-        const activeFolder = this.getActiveFolder(activeTextEditor);
-        if (activeFolder !== this.activeFolder) {
-            this.activeFolder = activeFolder;
-
-            if (activeFolder) {
-                const bar = this.activePreviewer?.statusBar;
-                bar && StatusBar.switch(bar);
-            } else StatusBar.switch(this.defaultBar);
+        for (const [, cpv] of Dispatcher.previewers) {
+            cpv.onChangeActiveFile(activeTextEditor.document.uri);
         }
-        this.activePreviewer?.onChangeActiveFile(activeTextEditor.document.uri);
+    }
+    static getPreviewer(folder: VS.WorkspaceFolder) {
+        return this.previewers.get(folder);
     }
     static get activePreviewer() {
         return this.activeFolder && this.previewers.get(this.activeFolder);
@@ -82,23 +93,6 @@ export class Dispatcher {
         for (const folder of VS.workspace.workspaceFolders ?? []) {
             this.previewers.set(folder, new Previewer(folder));
         }
-
-        const cmd = "ComponentPreviewer.openView";
-        StatusBar.init(cmd);
-        StatusBar.switch(this.defaultBar);
-
-        VS.commands.registerCommand(
-            cmd,
-            () => {
-                let bar: StatusBar | undefined;
-                if (this.activeFolder) {
-                    const folder = this.activeFolder;
-                    bar = this.previewers.get(folder)?.statusBar;
-                } else bar = this.defaultBar;
-                bar?.onClick?.();
-            },
-            this
-        );
         VS.window.onDidChangeActiveTextEditor(this.onChangeActiveTextEditor, this, extContext.subscriptions);
         VS.workspace.onDidChangeWorkspaceFolders(
             function (e) {
@@ -139,17 +133,9 @@ export class Dispatcher {
 
         return undefined;
     }
-    private static async handelClick() {
-        //不存在活动工作区文件夹
-        const folders = VS.workspace.workspaceFolders ?? [];
-        let folder = folders.length > 1 ? await VS.window.showWorkspaceFolderPick() : folders[0];
-        const previewer = folder && this.previewers.get(folder);
-        previewer?.open();
-    }
 }
 
 class Previewer {
-    readonly statusBar: StatusBar;
     private view?: View;
     private mapper!: Mapper;
     private bridge!: Bridge;
@@ -161,7 +147,6 @@ class Previewer {
     watchFilePathRegExp!: { [key: string]: RegExp }; //用来判断预设
 
     constructor(private readonly folder: VS.WorkspaceFolder) {
-        this.statusBar = new StatusBar("C Prev", "watch: false", this.onStatusBarClick.bind(this));
         this.extensionConfig = new CpvConfiguration(folder);
 
         const baseData = {
@@ -203,7 +188,7 @@ class Previewer {
             const data = this.baseData;
             switch (dataName) {
                 case "watch":
-                    this.switchWatch(value as boolean);
+                    this.onSwitchWatch(value as boolean);
                     break;
                 case "serverURL":
                     if (value === data.serverURL) return;
@@ -224,8 +209,8 @@ class Previewer {
             this.view = undefined;
         }
     }
-    private switchWatch(value: boolean) {
-        this.statusBar.tooltip = "watch: " + value.toString();
+    private onSwitchWatch(value: boolean) {
+        StatusBar.setList(this.folder, value ? "watching" : undefined);
         const data = this.baseData;
         if (value === data.watch) return;
         data.watch = value;
@@ -238,6 +223,10 @@ class Previewer {
                 this.onChangeActiveFile(activeFileUri);
             }
         }
+    }
+    switchWatch(value: boolean) {
+        this.onSwitchWatch(value);
+        this.view?.setBaseData(this.baseData);
     }
 
     /** 判断文件应该使用的预设 */

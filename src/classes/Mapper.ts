@@ -2,41 +2,36 @@ import * as VS from "vscode";
 import * as path from "node:path";
 const fsv = VS.workspace.fs;
 class Template {
-    #templateSplit: string[];
-    #replaceIndex: number[] = [];
-    maxIndex = -1;
+    #replaceTemplate: (number | string)[];
+    readonly maxIndex;
     constructor(template: string) {
-        this.#templateSplit = template.split(/<\d+>/);
-
-        const rpStr: number[] = [];
+        let replaceTemplate: (number | string)[] = [];
+        this.#replaceTemplate = replaceTemplate;
+        let max = -1;
         while (template !== "") {
-            let temp = template.match(/.*<(\d+)>/);
+            let temp = template.match(/^(.*?)<(\d+)>(.*)$/);
             if (temp) {
-                template = template.slice(temp[0].length);
-                rpStr.push(parseInt(temp[1]));
-            } else template = "";
+                template = temp[3];
+                temp[1].length && replaceTemplate.push(temp[1]);
+                let index = parseInt(temp[2]);
+                replaceTemplate.push(index);
+                if (index > max) max = index;
+            } else replaceTemplate.push(template);
         }
-
-        for (const num of rpStr) {
-            if (num > this.maxIndex) this.maxIndex = num;
-            this.#replaceIndex.push(num);
-        }
+        this.maxIndex = max;
     }
     replace(str: string, regExp: RegExp): string | never {
         const matchList = str.match(regExp);
         if (!matchList) {
             if (this.maxIndex >= 0) throw new Error("replaceString有依赖但没有传入参数");
-            else return this.#templateSplit.join();
+            else return this.#replaceTemplate[0] as string;
         }
         if (this.maxIndex > matchList.length) throw new Error("replaceString依赖的引用下标超过出入的数组长度");
         var returnStr = "";
-        for (let i = 0; i < this.#templateSplit.length; i++) {
-            const it = this.#templateSplit[i];
-            returnStr += it;
-            const rp = this.#replaceIndex[i];
-            if (rp !== undefined) returnStr += matchList[rp];
+        for (const split of this.#replaceTemplate) {
+            returnStr += typeof split === "number" ? matchList[split] : split;
         }
-        return str.replace(regExp, returnStr);
+        return returnStr;
     }
 }
 
