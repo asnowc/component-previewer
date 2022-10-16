@@ -67,8 +67,8 @@ export class Bridge {
             "index.html"
         ),
         new DataFile(
-            `import { preview } from "./bridge/bridgeFile";
-await preview();
+            `import { preview } from "./bridge/bridgeFile.js";
+preview();  //return a promise
 
 //do some thing...`,
             "main.js"
@@ -106,7 +106,7 @@ await preview();
         let bridgeFolderRelPath = path.join(bridgeData.previewFolderRelPath, "bridge");
         let relModPath = path.relative(bridgeFolderRelPath, bridgeData.mapFileRelPath);
 
-        const data = `import { render } from "../preset/${bridgeData.presetName}";
+        const data = `import { render } from "../preset/${bridgeData.presetName}.js";
 export const bridgeData = ${JSON.stringify(bridgeData, null, 4)};
 export const preview = () => render(getMod, bridgeData);
 const getMod = () => import("${relModPath}");`;

@@ -57,25 +57,40 @@
                 },
                 "ComponentPreviewer.filePathMapReplace": {
                     "markdownDescription": "%setting.filePathMapReplace.desc%",
-                    "type": "object",
+                    "type": "array",
                     "scope": "resource",
-                    "default": {
-                        "^(.+)(\\.\\w+)$": [
-                            "<1>.test<2>",
-                            "<1>.spec<2>"
+                    "default": [
+                        [
+                            "^(.+)(\\.\\w+)$",
+                            [
+                                "<1>.test<2>",
+                                "<1>.spec<2>"
+                            ]
                         ]
-                    }
+                    ]
                 },
                 "ComponentPreviewer.watchFilePathRegExp": {
                     "description": "%setting.watchFilePathRegExp.desc%",
-                    "type": "object",
+                    "type": "array",
                     "scope": "resource",
-                    "default": {
-                        "react": "\\.[tj]sx$",
-                        "vue": "\\.vue$",
-                        "html": "\\.html$",
-                        "other": "\\.[tj]s$"
-                    }
+                    "default": [
+                        [
+                            "react",
+                            "\\.[tj]sx$"
+                        ],
+                        [
+                            "vue",
+                            "\\.vue$"
+                        ],
+                        [
+                            "html",
+                            "\\.html$"
+                        ],
+                        [
+                            "other",
+                            "\\.[tj]s$"
+                        ]
+                    ]
                 },
                 "ComponentPreviewer.watchScope": {
                     "description": "%setting.watchScope%",

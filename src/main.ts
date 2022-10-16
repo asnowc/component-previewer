@@ -149,6 +149,7 @@ class Previewer {
     private baseData: MS.baseData;
     private subscriptions: VS.Disposable[] = [];
     private activeFileUrl?: VS.Uri;
+    private mapRelPath?: string;
     watchFilePathRegExp!: { [key: string]: RegExp }; //用来判断预设
 
     constructor(private readonly folder: VS.WorkspaceFolder) {
@@ -288,7 +289,6 @@ class Previewer {
         this.view?.setBaseData(this.baseData);
     }
     onChangeActiveFile(fileUri: VS.Uri) {
-        if (this.activeFileUrl?.toString() === fileUri.toString()) return;
         this.activeFileUrl = fileUri;
 
         const fileUrl = fileUri.toString();
@@ -303,10 +303,18 @@ class Previewer {
         const presetName = this.estimatePreset(fileUrl);
         const relativePath = path.relative(rootUrl, fileUrl);
         if (presetName) {
-            this.mapper.getMapUri(fileUrl).then(
-                (mapUrl) => this.updateBridge(presetName, relativePath, path.relative(rootUrl, mapUrl)),
-                (e) => this.updateBridge(presetName, relativePath)
-            );
+            this.mapper
+                .getMapUri(fileUrl)
+                .then(
+                    (mapUrl) => path.relative(rootUrl, mapUrl),
+                    (e) => relativePath
+                )
+                .then((mapRelPath) => {
+                    if (mapRelPath !== this.mapRelPath) {
+                        this.mapRelPath = mapRelPath;
+                        this.updateBridge(presetName, relativePath, mapRelPath);
+                    }
+                });
         } else return this.view?.dev({ path: decodeURI(fileUrl), fin: "no match" });
     }
     onActiveFileSave() {

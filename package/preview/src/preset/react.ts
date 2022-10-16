@@ -1,4 +1,5 @@
 import * as React from "react";
+import * as ReactDOM from "react-dom";
 import { prepare } from "./comm/Comm";
 import type { BridgeData } from "../bridge/bridgeFile";
 
@@ -13,10 +14,8 @@ export async function render(getMod: () => Promise<Object>, bridgeData: BridgeDa
     const [root, App] = prepare(mod, bridgeData.activeFileRelPath, React, isCPN);
     const version = parseInt(React.version.slice(0, React.version.indexOf(".")));
     if (version >= 18) {
-        const reactDOM: any = await import("react-dom/client");
-        reactDOM.createRoot(root).render(App);
+        (ReactDOM as any).createRoot(root).render(App);
     } else {
-        const reactDOM: any = await import("react-dom");
-        reactDOM.render(App, root);
+        (ReactDOM as any).render(App, root);
     }
 }

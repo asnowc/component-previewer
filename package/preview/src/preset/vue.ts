@@ -12,7 +12,7 @@ function isCPN(P: any) {
 
 export async function render(getMod: () => Promise<Object>, bridgeData: BridgeData) {
     const mod = await getMod();
-    const [root, App] = prepare(mod, bridgeData.mapFileRelPath, React, isCPN);
+    const [root, App] = prepare({...mod}, bridgeData.mapFileRelPath, React, isCPN);
     const ReactDOM = React;
     ReactDOM.createRoot(root).render(App);
 }

@@ -60,7 +60,12 @@ export interface ConfigurationType {
     filePathMapReplace: { [key: string]: string[] };
     watchScope: string;
 }
-export class CpvConfiguration extends Configuration<ConfigurationType> {
+type OriginalConfigType = Omit<ConfigurationType, "watchFilePathRegExp" | "filePathMapReplace"> & {
+    watchFilePathRegExp: [string, string][];
+    filePathMapReplace: [string, string[]][];
+};
+
+export class CpvConfiguration extends Configuration<any> {
     readonly sectionHead = "ComponentPreviewer";
     protected packageConfigs: any;
     protected config: VS.WorkspaceConfiguration;
@@ -79,20 +84,53 @@ export class CpvConfiguration extends Configuration<ConfigurationType> {
             }
         }
     }
-    get(): ConfigurationType {
-        const res = super.get();
-
-        /** 处理filePathMapReplace的错误值(确保类型正确) */
-        let obj = res.filePathMapReplace;
-        for (const key of Object.keys(obj)) {
-            var val = obj[key];
-            var newVal = [];
-            if (Array.isArray(val)) {
-                for (const item of val) if (typeof item === "string") newVal.push(item);
+    private arrayToObject<T = unknown>(array: any, valType: string | ((val: any) => boolean)): { [key: string]: T } {
+        let obj: { [key: string]: T } = {};
+        if (!Array.isArray(array)) return obj;
+        for (const item of array) {
+            if (!Array.isArray(item)) continue;
+            let [key, val] = item;
+            if (typeof key === "string") {
+                if (typeof valType === "string") {
+                    if (typeof val === valType) obj[key] = val;
+                } else {
+                    if (valType(val)) obj[key] = val;
+                }
             }
-            if (newVal.length === 0) Reflect.deleteProperty(obj, key);
-            else obj[key] = newVal;
         }
+        return obj;
+    }
+    private objectToArray<T = unknown>(object: any): [string, T][] {
+        if (typeof object !== "object" || object === null) return [];
+        let array: [string, T][] = [];
+        for (const item of Object.keys(object)) {
+            let val = object[item];
+            array.push([item, val]);
+        }
+        return array;
+    }
+    get(): ConfigurationType {
+        const res: ConfigurationType = super.get();
+
+        res.filePathMapReplace = this.arrayToObject<string[]>(res.filePathMapReplace, (val) => Array.isArray(val));
+        res.watchFilePathRegExp = this.arrayToObject<string>(res.watchFilePathRegExp, "string");
+
         return res;
+    }
+    update(option: ConfigurationType): void;
+    update<T extends keyof ConfigurationType>(key: T, val: ConfigurationType[T]): void;
+    update<T extends keyof ConfigurationType>(
+        keyOrOption: ConfigurationType | T,
+        val?: ConfigurationType[T] | undefined
+    ) {
+        const config = this.config;
+        let option = typeof keyOrOption === "object" ? keyOrOption : { [keyOrOption]: val };
+
+        for (const key of Object.keys(option) as (keyof ConfigurationType)[]) {
+            let value: any = option[key];
+
+            if (key === "filePathMapReplace" || key == "watchFilePathRegExp") value = this.objectToArray(value);
+            config.update(key, value);
+        }
     }
 }
