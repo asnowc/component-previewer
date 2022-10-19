@@ -1,148 +1,198 @@
-[EngLish](https://github.com/Asnow-c/ComponentPreviewer) | [中文](https://github.com/Asnow-c/ComponentPreviewer/blob/master/doc/readme_zh.md)
+[EngLish](https://github.com/Asnow-c/ComponentPreviewer) | [中文](https://github.com/Asnow-c/ComponentPreviewer/doc/readme_zh.md)
 
-## Component Previewer
+## Extension startup
 
-This plugin allows you to preview components in real time in VSCode. The page is refreshed in real time as the editor switches to a different component. It is also able to provide pre-prepared data to components and preview them in real time, just like writing test cases, without compromising code, and debugging test cases with the browser.
+1. The extension will be activated after vscode opens the folder
+2. Click "C Prev" in the status bar in the lower right corner to start
 
--   The plugin previews the **React** and **Vue** components
--   You can set the preview mapping (When you edit the 'MyPage.tsx' component, you preview 'MyPage.test.tsx'）
+## Features
 
-Listen for editor switches (preview only listens for jsx, tsx, vue)
+The extension addresses the following problems with previewing components：
 
-![image](https://github.com/Asnow-c/ComponentPreviewer/blob/master/doc/img/switchFile.gif)
+-   When developing a component, we want to preview the effect of the component. In order to speed up the preview, sometimes we don't need to load the entire project, but only the modules that the component depends on.
+-   Some components in a project need to meet certain conditions before they can be activated. In this case, it is difficult to see the effect of the component and debug the component
+-   To see the effect of different parameters of the component, you need to modify the project code
 
-You can manually switch files when exporting multiple components (you can prepare additional sets of data and test components with use cases)
+Component Previewer allows you to preview the component in visual Studio code in real time. When the editor switches to a different component, the page is refreshed in real time, and the data prepared in advance (test cases) can be provided to the component and then previewed in real time, and the test cases can be debugged with the browser.
 
-![image](https://github.com/Asnow-c/ComponentPreviewer/blob/master/doc/img/switchCase.gif)
+-   If the project is a non-native JavaScript project, it must be used with a build tool (such as vite or webpack)
+-   The plugin has built-in functionality of preview the **React** and **Vue** components.
+-   Some components must pass properties, which you can configure [Mapping Preview](#mapPreview)
 
-### Principle
+### Preview Component
 
--   Through monitoring vscode editor, access to current the file you are editing, will its information written to the project of `. Preview/bridge/bridgeData js `
--   `bridgeFile.js` exports an object containing the URL of the component currently being edited (relative to the local server)
--   `. Preview ` are automatically generated plug-in directory, you can access `http://localhost:5173/.preview/index.html` (Vite project) in a browser preview test cases
--   When VScode switches components, `bridgeFile.js` will be updated. Those with hot update function such as Vite and Webpack will automatically update the page. Those without hot update function can be previewed in the webView in VScode.
+Auto preview after switch (Chrome on the left, vscode on the right):
 
-Plug-in Settings page
+<img src="https://github.com/Asnow-c/ComponentPreviewer/raw/HEAD/doc/img/auto_preview.gif" width="700px"/>
+<br/><br/><br/>
+You can set up multiple test cases to see the effects of components with different parameters. With the browser, you can debug test cases.
+<br/><br/>
+<img src="https://github.com/Asnow-c/ComponentPreviewer/raw/HEAD/doc/img/test_case.gif" height="600px"/>
+<br/><br/><br/>
+Save automatic updates
+<br/><br/>
+<img src="https://github.com/Asnow-c/ComponentPreviewer/raw/HEAD/doc/img/auto_reload.gif" height="600px"/>
 
-![image](https://github.com/Asnow-c/ComponentPreviewer/blob/master/doc/img/setting.png)
+<div id="mapPreview" />
 
-> Tips: You can use this principle to implement your own preview page
+### Mapping Preview
 
-### How to use
-
-1. Opens a component file in the specified workspace folder
-2. Click the `Component Preview` window button in the upper-right corner of the editor
-3. In the preview window, click Settings, set the dependent installation directory, click `install`, enter the URL to save, and click the Watch button to listen for the editor to switch files
-4. You will also need to set `.preview/main.js` to import presets
-5. Different workspaces have different Settings, so you can listen to files in different workspaces
-
-### Example
-
-The Webpack project is actually in the original project can preview the normal situation, change the entry to `. Preview /main.js` path can be accessed as before
-And vite don't need any set of the original project, only need to install the plug-in dependencies to vite under the root of the server, by visiting `http://localhost:5173/.preview/index.html` is ok
-If you no longer need to preview, simply delete the `. Preview` folder
-
-#### vite project
-
-vite.config.js :
+For example, if we wanted to write test cases for `A.tsx`, we would create `A.test.tsx` in the same directory:
 
 ```
-export default {
-    root: "myWeb",  //Server root Directory
+import A from "./A"
+export default function TestCaseA(){
+    return <A prop1="test data 1"/>
+}
+export function TestCaseB(){
+    return <A prop1="test data 2"/>
+}
+```
+
+This will export two test cases. When we open `A.test.tsx`, the preview screen shows `a.test.tsx`. We can select test cases at the top of the preview screen
+View the extension configuration "[Watch File Path Reg Exp](#WatchFilePathRegExp)" 进行更高级的配置
+
+## Principle
+
+The file that vscode is currently editing, we'll call it an active file.
+When the active file changes (vscode switches files), the extension immediately writes the active file information to [bridgeFile.js](#bridgefile). (bridgeFile.js is located in the [.c_preview](#1) folder automatically generated by the extension),
+`bridgeFile.js` depends on the active file, and `.c_preview/index.html`depends on' bridgeFile.js', so when you open `.c_preview/index.html`in browser, you will see the page of the active file.
+
+With Vite (Webpack), when `bridgeFile.js` changes, Vite will automatically follow the new dependency and automatically update the page, with this function, so that the component preview can be achieved in the browser.
+
+> Tips: You can use `bridgeFile.js` to implement the preview interface yourself
+
+### Vite configuration
+
+> For Vite, you can preview components by going to `.c_preview/index.html`
+
+> Note: the`.c_preview`folder must be accessible to vite, see the [root](https://vitejs.dev/config/shared-options.html#root) configuration for `vite.config.js`
+
+#### Configuration sample
+
+**`vite.config.js` configuration:**
+
+```
+{
+    root: "./src/",
+}
+```
+
+**Component Previewer configuration:**
+
+Preview Folder: `./src`
+Server URL: `http://localhost:5173/.c_preview/index.html` //If you don't want to preview in vscode's built-in preview window, this option can be ignored
+
+Preview address in browser: `http://localhost:5173/.c_preview/index.html` //The default Vite port is 5173
+
+Run Vite to automatically preview
+
+### Webpack configuration
+
+> For Webpack, just set entry of `webpack.config.js` to `.c_preview/main.js` to achieve component preview
+
+#### Configuration sample
+
+**`webpack.config.js` configuration**
+
+```
+{
+    entry: __dirname+"/.c_preview/main.js",
+    ...
+}
+```
+
+**Component Previewer configuration:**
+Preview Folder: `.`
+Server URL: `http://localhost:8080` //If you don't want to preview in vscode's built-in preview window, this option can be ignored
+
+Preview address in browser:`http://localhost:8080` //The default Webpack port is 8080
+
+Run `webpack-dev-server` to automatically preview
+
+<div id=".c_preview">
+
+### .c_preview
+
+The .c_preview folder will be automatically generated when preview listening is enabled. You can change the generation location of the folder in the Settings.
+
+The folder contains the following files:
+
+```
+- bridge
+    bridgeFile.js
++ preset    //The default presets are put here
+main.js
+index.html
+```
+
+<div id="bridgeFile">
+
+### bridgeFile
+
+BridgeFile contains the following information:
+
+```
+import { render } from "../preset/vue.js";  //The imported presets are generated according to presetName
+export const bridgeData = {
+    workspaceFolder: "viteReact",
+    previewFolderRelPath: "",
+    activeFileRelPath: "./B.test.tsx",  //Relative to the workspace path
+    mapFileRelPath: "./B.test.tsx",     //Relative to the workspace path
+    presetName: string,                 //The default judged by watchFilePathRegExp
+    workspaceFolderName: string
 };
-
+export const preview = () => render(getMod, bridgeData);
+const getMod = () => import("../../B.test.tsx");   //This always importing an active file
 ```
 
-Open the `Compnonent Previewer` Settings, set the `Server root Directory` Settings and Vite configuration of `root` consistent, click the icon to install dependencies
+## Extension configuration
 
-React configuration `.preview/main.js`:
+#### Preview Folder
 
-```
-import { autoRender } from "./preset/reactVite"; //React preset, support React16 ~ React18
-autoRender();
-```
+The location where the [.c_preview](#.c_preview) folder was generated. By default, it is generated in the workspace folder directory
 
-Vue configuration `.preview/main.js`:
+You can set `.c_preview` to node_modules, but note that Vite and Webpack do not listen to files in node_modules by default. Additional configuration is required for Vite and Webpack. To eliminate `. C_preview `
+See the [server.watch](https://cn.vitejs.dev/config/server-options.html#server-watch) of `vite.config.js`
+See the [watchOptions.ignored](https://webpack.docschina.org/configuration/watch/#watchoptionsignored) of `webpack.config.js`
 
-```
-import { autoRender } from "./preset/vueVite"; //Vue preset, support Vue3，The official version will support Vue2
-autoRender();
-```
+#### File Path Map Replace
 
-After configuration, start Vite, click `Watch` to preview in real time
+According to the configuration, if the mapping file exists, it will preview the mapping file, if none exists, it will preview the original file.
 
-> The default in your visit `MyPage. TSX`, automatically preview `MyPage. Test. The TSX`, you can modify `. Preview/preset/re/Comm. ` of js `getActiveFileMap()` custom mapping function.
+The substitution character "<>" represents the capture group that references the regular expression, and "<1>" represents group 1
 
-Or you can set it like this:
+This is an array of values, matched and replaced in order, in the format `[regular expression to match, [map detection list]]`. The default value is:
 
 ```
-import { renderFromFileURL } from "./preset/reactVite"; //React预设, 支持 React16 ~ React18
-import bridge from "./bridge/bridgeFile.js";
-renderFromFileURL("/"+bridge.activeFile);
+[
+    [ "^(.+)(\\.\\w+)$", [ "<1>.test<2>",  "<1>.spec<2>" ]]
+]
 ```
 
-> The official release will provide a faster setup method
+For example: Active file path:
+`/user/work/myProject/src/hello/page.tsx`
 
-#### webpack project
+Mapping configuration: `"^(.+)(\.\w+))$"`:`"<1>.test<2>"`
+Regular expression matching result:`["/user/work/myProject/src/hello/src/page.tsx", "/user/work/myProject/src/hello/src/page", ".tsx"]`
+The final splice is "/user/work/myProject/src/hello/page **.test** .tsx"
 
-Open the `Compnonent Previewer` Settings, save `Server root Directory` as empty, and click the icon to install dependencies
-Set the Server URL to the same as webpack-dev-erver (default http://localhost:8080)
+Mapping configuration ： `"^(.+?/)src(/.+)$"`:`"<1>test<2>"`
+Regular expression matching result:`["/user/work/myProject/src/hello/page.tsx","/user/work/myProject/","/\hello/page.tsx"]`
+The final splice is "/user/work/myProject/ **test** /hello/page.tsx"
 
-webpack.config.js:
+<div id="WatchFilePathRegExp"/>
+#### Watch File Path Reg Exp
 
-```
-module.exports = {
-    entry: "./.preview/main.js", //Here it is set to .preview/main.js
-    mode: "development",
-    devServer: {
-        static: {
-            directory: "./public",
-        },
-        compress: false,
-    },
-    resolve: {
-        extensions: [".js", ".ts", ".jsx", ".tsx"],
-    },
-    module: {
-        rules: [{
-                test: /\.tsx?$/,
-                use: [
-                    {
-                        loader: "ts-loader",
-                    },
-                ],
-            },
-        ],
-    }
-};
+The file to listen on. For react component previews, maybe we just need to listen for the `.tsx` file and ignore the `bridgeFile.js` update when the editor switches to another file
+
+This is an array of values that will be checked sequentially. The format is`[default name, matched regular expression]`, default value::
 
 ```
-
-Note that Webpack needs to set `entry` of `webpack.config.js` to`.preview/main.js`
-
-React configuration `.preview/main.js`:
-
+[
+    [ "react", "\\.[tj]sx$" ],
+    [ "vue", "\\.vue$" ],
+    [ "html", "\\.html$" ],
+    [ "other", "\\.[tj]s$" ]
+]
 ```
-import { renderFromActiveModule } from "./preset/vueWebpack"; //React preset, support React16 to React18
-renderFromActiveModule();   //Webpack does not support preview mapping, this will be improved in the future
-```
-
-Vue configuration `.preview/main.js`:
-
-```
-import { renderFromActiveModule } from "./preset/vueWebpack"; //Vue preset, support for Vue3, official version will support VUe2
-renderFromActiveModule();   //Webpack does not support preview mapping, this will be improved in the future
-```
-
-After configuration, start Webpack-dev-server and click `Watch` for real-time preview
-
-### About
-
-The preview version still has a lot of bugs and some strange state, the official version is still in development, welcome to submit your suggestions
-
-The official release will include the following features
-
--   Improve previews of all versions of React and Vue
--   Supports listening for custom extensions
--   You can quickly set the preview map directly within the plugin (Webpack will also support the map preview)
--   The Webview in the plugin will support the installation of the specified project preset, no need to modify main.js (Vite project will no longer need to do any Settings, Webpack project only need to modify entry)
