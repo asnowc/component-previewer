@@ -296,9 +296,11 @@ class Previewer {
         if (!baseData.watch) return this.view?.dev({ path: decodeURI(fileUrl), fin: "no watch" });
 
         const rootUrl = this.folder.uri.toString();
-        let watchScope = path.join(rootUrl, baseData.watchScope);
-        if (path.relative(watchScope, fileUrl).startsWith(".."))
-            return this.view?.dev({ path: decodeURI(fileUrl), fin: "out of range" });
+        if (baseData.watchScope) {
+            let watchScope = path.join(rootUrl, baseData.watchScope);
+            if (path.relative(watchScope, fileUrl).startsWith(".."))
+                return this.view?.dev({ path: decodeURI(fileUrl), fin: "out of range" });
+        }
 
         const presetName = this.estimatePreset(fileUrl);
         const relativePath = path.relative(rootUrl, fileUrl);

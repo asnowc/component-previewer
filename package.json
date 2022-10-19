@@ -91,11 +91,6 @@
                             "\\.[tj]s$"
                         ]
                     ]
-                },
-                "ComponentPreviewer.watchScope": {
-                    "description": "%setting.watchScope%",
-                    "type": "string",
-                    "scope": "resource"
                 }
             }
         }

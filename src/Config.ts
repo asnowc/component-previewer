@@ -58,7 +58,7 @@ export interface ConfigurationType {
     previewFolderRelPath: string;
     watchFilePathRegExp: { [key: string]: string };
     filePathMapReplace: { [key: string]: string[] };
-    watchScope: string;
+    watchScope?: string;
 }
 type OriginalConfigType = Omit<ConfigurationType, "watchFilePathRegExp" | "filePathMapReplace"> & {
     watchFilePathRegExp: [string, string][];
