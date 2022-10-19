@@ -1,0 +1,7 @@
+{
+    "cmd.openView": "Open the Component Previewer",
+    "setting.serverURL.desc": "Local Server URL",
+    "setting.previewFolderRelPath.desc": "Location of the preview folder (relative to workspace folder)",
+    "setting.watchFilePathRegExp.desc": "Listen only for paths that are matched using the regular expression (Matches only sections relative to the workspace folder directory. For example, if the workspace directory is \"/project\" and the selected file path is \"/project/src/a.tsx\", the string to be matched is \"src/a.tsx\". The bridgeFile will only be updated if the match is successful)",
+    "setting.filePathMapReplace.desc": "Configuration of mapping preview (Matches only sections relative to the workspace folder directory. For example, if the workspace directory is \"/project\" and the selected file path is \"/project/src/a.tsx\", the string to be matched is \"src/a.tsx\". Viewing [Mapping Rules](https://github.com/Asnow-c/ComponentPreviewer#how-to-use)"
+}

@@ -1,10 +1,11 @@
-import React from "react";
+import * as React from "react";
 const h = React.createElement;
 type Bprops = {
     data1: string;
 };
 
 var style = document.styleSheets[0];
+
 style.insertRule(`@keyframes shrink {
     0% {
       width: 90%;
@@ -40,7 +41,7 @@ export default function A(props: Bprops) {
                 fontSize: "25px",
             }}
         >
-            <div style={{padding:"50px"}}>{props.data1}</div>
+            <div style={{ padding: "50px" }}>{props.data1}</div>
             <div
                 style={
                     {

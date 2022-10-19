@@ -1,5 +1,5 @@
 module.exports = {
-    entry: "./.preview/main.js",
+    entry: "./.c_preview/main.js",
     mode: "development",
     devtool: "source-map",
     devServer: {

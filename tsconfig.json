@@ -1,14 +1,15 @@
 {
     "compilerOptions": {
+        "moduleResolution": "node",
         "module": "commonjs",
         "target": "ESNext",
         "outDir": "out",
         "lib": ["ESNext"],
         "sourceMap": true,
-        "rootDir": "src",
         "strict": true /* enable all strict type-checking options */,
-        "skipLibCheck": true
+        "skipDefaultLibCheck": true,
+        "resolveJsonModule": true
     },
-    "exclude": ["**/node_modules/**", "package"],
+    "exclude": ["**/node_modules/**", "package.json"],
     "include": ["src"]
 }

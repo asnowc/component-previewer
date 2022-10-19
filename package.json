@@ -2,6 +2,7 @@
     "name": "componentpreviewer",
     "displayName": "Component Previewer",
     "publisher": "Asnow",
+    "license": "MIT",
     "description": "Preview React/Vue components more easily",
     "repository": "https://github.com/Asnow-c/ComponentPreviewer",
     "icon": "res/icon/logo_128.png",
@@ -16,17 +17,17 @@
         "Webpack",
         "component"
     ],
-    "version": "0.0.1",
+    "version": "1.0.0",
     "engines": {
-        "vscode": "^1.60.0"
+        "vscode": "^1.63.0"
     },
     "categories": [
         "Debuggers"
     ],
     "activationEvents": [
-        "*"
+        "workspaceContains:"
     ],
-    "main": "./dist/extension.js",
+    "main": "./out/src/extension.js",
     "targets": {
         "main": false
     },
@@ -34,48 +35,79 @@
         "commands": [
             {
                 "command": "ComponentPreviewer.openView",
-                "title": "组件预览",
+                "title": "%cmd.openView%",
                 "icon": "$(default-view-icon)",
                 "category": "ComponentPreviewer"
             }
         ],
-        "menus": {
-            "editor/title": [
-                {
-                    "command": "ComponentPreviewer.openView",
-                    "group": "navigation",
-                    "when": "editorLangId == typescriptreact || editorLangId == javascriptreact || editorLangId == vue"
-                }
-            ]
-        },
         "configuration": {
             "title": "Component Previewer",
             "properties": {
                 "ComponentPreviewer.serverURL": {
-                    "description": "Local Server URL",
+                    "description": "%setting.serverURL.desc%",
                     "type": "string",
-                    "default": "http://localhost:5173/.preview/index.html",
+                    "default": "http://localhost:5173/.c_preview/index.html",
                     "scope": "resource"
                 },
-                "ComponentPreviewer.serverRootDir": {
-                    "description": "Dependent installation location (relative to workspace folder)",
+                "ComponentPreviewer.previewFolderRelPath": {
+                    "description": "%setting.previewFolderRelPath.desc%",
                     "type": "string",
                     "scope": "resource",
                     "default": ""
+                },
+                "ComponentPreviewer.filePathMapReplace": {
+                    "markdownDescription": "%setting.filePathMapReplace.desc%",
+                    "type": "array",
+                    "scope": "resource",
+                    "default": [
+                        [
+                            "^(.+)(\\.\\w+)$",
+                            [
+                                "<1>.test<2>",
+                                "<1>.spec<2>"
+                            ]
+                        ]
+                    ]
+                },
+                "ComponentPreviewer.watchFilePathRegExp": {
+                    "description": "%setting.watchFilePathRegExp.desc%",
+                    "type": "array",
+                    "scope": "resource",
+                    "default": [
+                        [
+                            "react",
+                            "\\.[tj]sx$"
+                        ],
+                        [
+                            "vue",
+                            "\\.vue$"
+                        ],
+                        [
+                            "html",
+                            "\\.html$"
+                        ],
+                        [
+                            "other",
+                            "\\.[tj]s$"
+                        ]
+                    ]
                 }
             }
         }
     },
     "scripts": {
-        "watch": "tsc -watch",
-        "build": "tsc -p tsconfig-build.json"
+        "buildAll": "pnpm buildExt & pnpm buildPreview & pnpm buildWebView",
+        "package": "vsce package -o ./dist/componentPreviewer.vsix",
+        "publish": "vsce publish -i ./dist/componentPreviewer.vsix",
+        "watchExt": "tsc -watch",
+        "buildExt": "tsc",
+        "watchPreview": "tsc -p ./package/preview/tsconfig.json --watch ",
+        "buildPreview": "tsc -p ./package/preview/tsconfig.json",
+        "watchWebView": "vite build -c ./package/webview/vite.config.ts --watch --minify false",
+        "buildWebView": "vite build -c ./package/webview/vite.config.ts --sourcemap false"
     },
     "devDependencies": {
-        "@types/fs-extra": "^9.0.13",
         "@types/node": "16",
         "@types/vscode": "^1.63.0"
-    },
-    "dependencies": {
-        "fs-extra": "^10.1.0"
     }
 }

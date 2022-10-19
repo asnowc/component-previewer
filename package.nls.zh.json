@@ -1,0 +1,7 @@
+{
+    "cmd.openView": "打开组件预览窗口",
+    "setting.serverURL.desc": "本地服务器 URL",
+    "setting.previewFolderRelPath.desc": "preview 文件夹的位置（相对于工作区文件夹目录。）",
+    "setting.watchFilePathRegExp.desc": "只监听使用该正则表达式匹配通过的文件路径（只匹配相对与工作区文件夹目录下的部分. 比如工作区目录为 \"/project\"，当前选中的文件路径为 \"/project/src/a.tsx\"，则要匹配的字符串为 \"src/a.tsx\"。只有匹配成功才会更新bridgeFile）",
+    "setting.filePathMapReplace.desc": "映射预览的配置（只匹配相对与工作区文件夹目录下的部分. 比如工作区目录为 \"/project\"，当前选中的文件路径为 \"/project/src/a.tsx\"，则要匹配的字符串为 \"src/a.tsx\"）。查看 [映射规则](https://github.com/Asnow-c/ComponentPreviewer#how-to-use)"
+}

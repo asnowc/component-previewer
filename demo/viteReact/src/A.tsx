@@ -1,4 +1,4 @@
-import React from "react";
+import * as React from "react";
 const h = React.createElement;
 type Aprops = {
     data1: string;
@@ -9,7 +9,7 @@ type Aprops = {
 document.styleSheets[0].insertRule(`
 td:hover {
     background-color: rgb(101, 188, 188);
-}`)
+}`);
 export default function A(props: Aprops) {
     return (
         <table
