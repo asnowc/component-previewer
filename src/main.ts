@@ -278,13 +278,8 @@ class Previewer {
         this.mapper = new Mapper(baseData.filePathMapReplace);
 
         let bridgeRootUri = VS.Uri.joinPath(this.folder.uri, this.baseData.previewFolderRelPath);
-        if (this.bridge) {
-            if (baseData.watch) this.bridge.move(bridgeRootUri);
-            else {
-                this.bridge.revoke();
-                this.bridge.rootDirUri = bridgeRootUri;
-            }
-        } else this.bridge = new Bridge(bridgeRootUri);
+        if (this.bridge) this.bridge.move(bridgeRootUri);
+        else this.bridge = new Bridge(bridgeRootUri);
 
         this.view?.setBaseData(this.baseData);
     }

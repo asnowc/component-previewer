@@ -80,10 +80,16 @@ preview();  //return a promise
     constructor(public rootDirUri: VS.Uri) {}
     async move(rootUri: VS.Uri) {
         if (this.rootDirUri.toString() === rootUri.toString()) return;
-        await this.revoke();
 
+        let oldUri = this.folderUri;
         this.rootDirUri = rootUri;
-        return this.install();
+        try {
+            let info = await fsv.stat(oldUri);
+            if (info.type === VS.FileType.Directory) {
+                await fsv.copy(oldUri, this.folderUri, { overwrite: true });
+                await fsv.delete(oldUri, { recursive: true });
+            }
+        } catch (error) {}
     }
     /** 重新安装preview文件夹 */
     install() {
