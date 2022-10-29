@@ -114,7 +114,7 @@ preview();  //return a promise
 
         const data = `import { render } from "../preset/${bridgeData.presetName}.js";
 export const bridgeData = ${JSON.stringify(bridgeData, null, 4)};
-export const preview = () => render(getMod, bridgeData);
+export const preview = () => render(getMod);
 const getMod = () => import("${relModPath}");`;
         return fsv.writeFile(VS.Uri.joinPath(this.folderUri, "bridge/bridgeFile.js"), Buffer.from(data));
     }

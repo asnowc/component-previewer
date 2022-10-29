@@ -310,6 +310,8 @@ class Previewer {
                     if (mapRelPath !== this.mapRelPath) {
                         this.mapRelPath = mapRelPath;
                         this.updateBridge(presetName, relativePath, mapRelPath);
+                    } else {
+                        this.view?.dev({ mapPath: mapRelPath, fin: "no change" });
                     }
                 });
         } else return this.view?.dev({ path: decodeURI(fileUrl), fin: "no match" });

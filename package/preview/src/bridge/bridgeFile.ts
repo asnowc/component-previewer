@@ -14,5 +14,5 @@ export const bridgeData = {
     presetName: "other",
 };
 export type BridgeData = typeof bridgeData;
-export const preview = () => render(getMod, bridgeData);
-const getMod = () => import("../preset/defaultPage"); //如果使用webpack, 则必须使用完整字符串导入
+export const preview = () => render(getMod);
+export const getMod = (): any => import("." as string); //如果使用webpack, 则必须使用完整字符串导入
