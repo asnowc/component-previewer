@@ -1,4 +1,4 @@
-[EngLish](https://github.com/Asnow-c/ComponentPreviewer) | [中文](https://github.com/Asnow-c/ComponentPreviewer/doc/readme_zh.md)
+[EngLish](https://github.com/Asnow-c/ComponentPreviewer) | [中文](https://github.com/Asnow-c/ComponentPreviewer/blob/master/doc/readme_zh.md)
 
 ## Extension startup
 
@@ -50,7 +50,7 @@ export function TestCaseB(){
 ```
 
 This will export two test cases. When we open `A.test.tsx`, the preview screen shows `a.test.tsx`. We can select test cases at the top of the preview screen
-View the extension configuration "[Watch File Path Reg Exp](#WatchFilePathRegExp)" 进行更高级的配置
+View the extension configuration "[Watch File Path Reg Exp](#WatchFilePathRegExp)" 
 
 ## Principle
 
@@ -153,8 +153,8 @@ const getMod = () => import("../../B.test.tsx");   //This always importing an ac
 The location where the [.c_preview](#.c_preview) folder was generated. By default, it is generated in the workspace folder directory
 
 You can set `.c_preview` to node_modules, but note that Vite and Webpack do not listen to files in node_modules by default. Additional configuration is required for Vite and Webpack. To eliminate `. C_preview `
-See the [server.watch](https://cn.vitejs.dev/config/server-options.html#server-watch) of `vite.config.js`
-See the [watchOptions.ignored](https://webpack.docschina.org/configuration/watch/#watchoptionsignored) of `webpack.config.js`
+See the [server.watch](https://vitejs.dev/config/server-options.html#server-watch) of `vite.config.js`
+See the [watchOptions.ignored](https://webpack.js.org/configuration/watch/#watchoptionsignored) of `webpack.config.js`
 
 #### File Path Map Replace
 
