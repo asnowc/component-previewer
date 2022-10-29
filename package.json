@@ -83,10 +83,6 @@
                             "\\.vue$"
                         ],
                         [
-                            "html",
-                            "\\.html$"
-                        ],
-                        [
                             "other",
                             "\\.[tj]s$"
                         ]
@@ -101,8 +97,8 @@
         "publish": "vsce publish -i ./dist/componentPreviewer.vsix",
         "watchExt": "tsc -watch",
         "buildExt": "tsc",
-        "watchPreview": "tsc -p ./package/preview/tsconfig.json --watch ",
-        "buildPreview": "tsc -p ./package/preview/tsconfig.json",
+        "watchPreview": "tsc -p ./package/preview/tsconfig_build.json --watch ",
+        "buildPreview": "tsc -p ./package/preview/tsconfig_build.json",
         "watchWebView": "vite build -c ./package/webview/vite.config.ts --watch --minify false",
         "buildWebView": "vite build -c ./package/webview/vite.config.ts --sourcemap false"
     },
