@@ -4,8 +4,8 @@ demo/**
 doc/**
 package/**
 src/**
+dist/**
 .gitignore
-Component-Previewer.code-workspace
 pnpm-lock.yaml
 pnpm-workspace.yaml
 tsconfig.json

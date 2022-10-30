@@ -17,7 +17,7 @@
         "Webpack",
         "component"
     ],
-    "version": "1.0.0",
+    "version": "1.0.3",
     "engines": {
         "vscode": "^1.63.0"
     },
@@ -59,6 +59,18 @@
                     "markdownDescription": "%setting.filePathMapReplace.desc%",
                     "type": "array",
                     "scope": "resource",
+                    "items": [
+                        {
+                            "type": "string",
+                            "description": ""
+                        },
+                        {
+                            "type": "array",
+                            "items": {
+                                "type": "string"
+                            }
+                        }
+                    ],
                     "default": [
                         [
                             "^(.+)(\\.\\w+)$",
@@ -73,6 +85,14 @@
                     "description": "%setting.watchFilePathRegExp.desc%",
                     "type": "array",
                     "scope": "resource",
+                    "items": {
+                        "type": "array",
+                        "items": {
+                            "type": "string",
+                            "maxItems": 2,
+                            "minItems": 2
+                        }
+                    },
                     "default": [
                         [
                             "react",
@@ -81,10 +101,6 @@
                         [
                             "vue",
                             "\\.vue$"
-                        ],
-                        [
-                            "html",
-                            "\\.html$"
                         ],
                         [
                             "other",
@@ -96,13 +112,12 @@
         }
     },
     "scripts": {
-        "buildAll": "pnpm buildExt & pnpm buildPreview & pnpm buildWebView",
-        "package": "vsce package -o ./dist/componentPreviewer.vsix",
+        "package": "vsce ls  --no-dependencies && vsce package -o ./dist/componentPreviewer.vsix --no-dependencies",
         "publish": "vsce publish -i ./dist/componentPreviewer.vsix",
         "watchExt": "tsc -watch",
         "buildExt": "tsc",
-        "watchPreview": "tsc -p ./package/preview/tsconfig.json --watch ",
-        "buildPreview": "tsc -p ./package/preview/tsconfig.json",
+        "watchPreview": "tsc -p ./package/preview/tsconfig_build.json --watch ",
+        "buildPreview": "tsc -p ./package/preview/tsconfig_build.json",
         "watchWebView": "vite build -c ./package/webview/vite.config.ts --watch --minify false",
         "buildWebView": "vite build -c ./package/webview/vite.config.ts --sourcemap false"
     },

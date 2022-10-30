@@ -10,6 +10,6 @@
         "skipDefaultLibCheck": true,
         "resolveJsonModule": true
     },
-    "exclude": ["**/node_modules/**", "package.json"],
+    "exclude": ["**/node_modules/**"],
     "include": ["src"]
 }

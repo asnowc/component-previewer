@@ -7,6 +7,7 @@ import type * as MS from "../package/webview/message";
 import env from "./env";
 import { Bridge, BridgeData } from "./classes/Bridge";
 import { Mapper } from "./classes/Mapper";
+import { position as res_position } from "./constants/resource";
 
 const message = {
     getHead: "Component Previewer: ",
@@ -278,13 +279,8 @@ class Previewer {
         this.mapper = new Mapper(baseData.filePathMapReplace);
 
         let bridgeRootUri = VS.Uri.joinPath(this.folder.uri, this.baseData.previewFolderRelPath);
-        if (this.bridge) {
-            if (baseData.watch) this.bridge.move(bridgeRootUri);
-            else {
-                this.bridge.revoke();
-                this.bridge.rootDirUri = bridgeRootUri;
-            }
-        } else this.bridge = new Bridge(bridgeRootUri);
+        if (this.bridge) this.bridge.move(bridgeRootUri);
+        else this.bridge = new Bridge(bridgeRootUri);
 
         this.view?.setBaseData(this.baseData);
     }
@@ -315,6 +311,8 @@ class Previewer {
                     if (mapRelPath !== this.mapRelPath) {
                         this.mapRelPath = mapRelPath;
                         this.updateBridge(presetName, relativePath, mapRelPath);
+                    } else {
+                        this.view?.dev({ mapPath: mapRelPath, fin: "no change" });
                     }
                 });
         } else return this.view?.dev({ path: decodeURI(fileUrl), fin: "no match" });
@@ -336,7 +334,7 @@ class View extends EventEmitter {
     constructor(name: string) {
         super();
 
-        const resUri = VS.Uri.joinPath(extContext.extensionUri, "out/res/webview");
+        const resUri = VS.Uri.joinPath(extContext.extensionUri, res_position.webview);
         //初始化webView
         const webViewPanel = VS.window.createWebviewPanel("catCoding", "CPrev: " + name, VS.ViewColumn.Beside, {
             enableScripts: true,

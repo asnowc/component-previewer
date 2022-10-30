@@ -1,6 +1,7 @@
 import * as VS from "vscode";
 import { extContext } from "../extension";
 import * as path from "node:path/posix";
+import { position as res_position } from "../constants/resource";
 
 const fsv = VS.workspace.fs;
 
@@ -39,7 +40,7 @@ class DataFile extends PreviewFile {
 }
 
 export class Bridge {
-    private static extUri = VS.Uri.joinPath(extContext.extensionUri, "out/res/preview");
+    private static extUri = VS.Uri.joinPath(extContext.extensionUri, res_position.preview);
     static files: PreviewFile[] = [
         new SrcFile(this.extUri, "preset"),
         new DataFile(
@@ -80,10 +81,16 @@ preview();  //return a promise
     constructor(public rootDirUri: VS.Uri) {}
     async move(rootUri: VS.Uri) {
         if (this.rootDirUri.toString() === rootUri.toString()) return;
-        await this.revoke();
 
+        let oldUri = this.folderUri;
         this.rootDirUri = rootUri;
-        return this.install();
+        try {
+            let info = await fsv.stat(oldUri);
+            if (info.type === VS.FileType.Directory) {
+                await fsv.copy(oldUri, this.folderUri, { overwrite: true });
+                await fsv.delete(oldUri, { recursive: true });
+            }
+        } catch (error) {}
     }
     /** 重新安装preview文件夹 */
     install() {
@@ -108,7 +115,7 @@ preview();  //return a promise
 
         const data = `import { render } from "../preset/${bridgeData.presetName}.js";
 export const bridgeData = ${JSON.stringify(bridgeData, null, 4)};
-export const preview = () => render(getMod, bridgeData);
+export const preview = () => render(getMod);
 const getMod = () => import("${relModPath}");`;
         return fsv.writeFile(VS.Uri.joinPath(this.folderUri, "bridge/bridgeFile.js"), Buffer.from(data));
     }

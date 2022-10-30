@@ -10,7 +10,7 @@ export default defineConfig({
         "process.env": {},
     },
     build: {
-        outDir: path.resolve(pjDir, "../../out/res/webview"),
+        outDir: path.resolve(pjDir, "../../res/webview"),
         lib: {
             entry: path.resolve(pjDir, "src/main.ts"),
             formats: ["es"],

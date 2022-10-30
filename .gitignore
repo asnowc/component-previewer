@@ -6,4 +6,5 @@ node_modules
 .c_preview
 demo/*/.vscode
 
-/*.code-workspace
+/res/preview
+/res/webview
