@@ -5,7 +5,7 @@
         "jsxFactory": "h",
         "module": "ESNext",
         "target": "ESNext",
-        "outDir": "../../out/res/preview",
+        "outDir": "../../res/preview",
         "lib": ["ESNext", "DOM"],
         "sourceMap": false,
         "rootDir": "src",

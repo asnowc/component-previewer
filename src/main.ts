@@ -7,6 +7,7 @@ import type * as MS from "../package/webview/message";
 import env from "./env";
 import { Bridge, BridgeData } from "./classes/Bridge";
 import { Mapper } from "./classes/Mapper";
+import { position as res_position } from "./constants/resource";
 
 const message = {
     getHead: "Component Previewer: ",
@@ -333,7 +334,7 @@ class View extends EventEmitter {
     constructor(name: string) {
         super();
 
-        const resUri = VS.Uri.joinPath(extContext.extensionUri, "out/res/webview");
+        const resUri = VS.Uri.joinPath(extContext.extensionUri, res_position.webview);
         //初始化webView
         const webViewPanel = VS.window.createWebviewPanel("catCoding", "CPrev: " + name, VS.ViewColumn.Beside, {
             enableScripts: true,

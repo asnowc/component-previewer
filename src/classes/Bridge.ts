@@ -1,6 +1,7 @@
 import * as VS from "vscode";
 import { extContext } from "../extension";
 import * as path from "node:path/posix";
+import { position as res_position } from "../constants/resource";
 
 const fsv = VS.workspace.fs;
 
@@ -39,7 +40,7 @@ class DataFile extends PreviewFile {
 }
 
 export class Bridge {
-    private static extUri = VS.Uri.joinPath(extContext.extensionUri, "out/res/preview");
+    private static extUri = VS.Uri.joinPath(extContext.extensionUri, res_position.preview);
     static files: PreviewFile[] = [
         new SrcFile(this.extUri, "preset"),
         new DataFile(

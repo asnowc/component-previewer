@@ -1,6 +1,6 @@
-import { contributes, version } from "../package.json";
 import * as VS from "vscode";
-export { contributes, version };
+import { extContext } from "./extension";
+const { contributes }: PackageJSON = extContext.extension.packageJSON;
 
 type ConfigurationItems = typeof contributes.configuration.properties;
 type SubKeyHead<T extends string> = keyof ConfigurationItems extends `${T}.${infer P}` ? P : never;
