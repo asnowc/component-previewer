@@ -5,7 +5,8 @@ import { bridgeData } from "../bridge/bridgeFile";
 
 /** 简单判断一个变量是否是组件 */
 function isCpn(P: any) {
-    return typeof P === "function";
+    let type = typeof P;
+    return type === "function" || type === "object";
 }
 export async function render(getMod: () => Promise<any>) {
     const [root, App] = await createPage(getMod(), bridgeData, {

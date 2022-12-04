@@ -191,8 +191,6 @@ This is an array of values that will be checked sequentially. The format is`[def
 ```
 [
     [ "react", "\\.[tj]sx$" ],
-    [ "vue", "\\.vue$" ],
-    [ "html", "\\.html$" ],
-    [ "other", "\\.[tj]s$" ]
+    [ "vue", "\\.vue$" ]
 ]
 ```

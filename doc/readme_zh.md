@@ -190,8 +190,6 @@ const getMod = () => import("../../B.test.tsx");   //这里导入的永远是活
 ```
 [
     [ "react", "\\.[tj]sx$" ],
-    [ "vue", "\\.vue$" ],
-    [ "html", "\\.html$" ],
-    [ "other", "\\.[tj]s$" ]
+    [ "vue", "\\.vue$" ]
 ]
 ```
