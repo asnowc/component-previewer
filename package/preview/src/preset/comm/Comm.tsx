@@ -23,9 +23,7 @@ type FileInfo = {
     mapUrl: string;
 };
 
-type obj = {
-    [key: number | string | symbol]: any;
-};
+type obj = Record<string | number | symbol, any>;
 
 type JsxTool = {
     createElement: (...arg: any) => JSX.Element;
