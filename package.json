@@ -17,7 +17,7 @@
         "Webpack",
         "component"
     ],
-    "version": "1.0.3",
+    "version": "1.0.4",
     "engines": {
         "vscode": "^1.63.0"
     },
